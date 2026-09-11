@@ -104,14 +104,48 @@ class SubscriptionPrice
     }
 
     /**
+     * "$5.90 a month or $49 a year" — every plan's price in prose, cheapest
+     * first, each with the period its own plan is billed on.
+     *
+     * For the three places that state the price to a machine rather than to a
+     * reader: the pricing page's meta description, the crawler summary and the
+     * llms.txt an assistant paraphrases. None of them may say "from", because
+     * a paraphrase of one price reads as the only price there is, and all three
+     * must say it in the same words, which is what this method is for.
+     *
+     * Built from every Plan rather than by naming two, so a third plan cannot
+     * be sold while these three sentences quietly go on quoting two.
+     */
+    public static function everyPriceInProse(): string
+    {
+        $quotes = collect(Plan::cases())
+            ->sortBy(fn (Plan $plan): float => $plan->price())
+            ->map(fn (Plan $plan): string => self::formatted($plan).' a '.$plan->interval()->value)
+            ->all();
+
+        return implode(' or ', $quotes);
+    }
+
+    /**
+     * The plan a "from" price quotes: whichever costs least per charge. The
+     * page that names one figure asks for this rather than naming a plan, so
+     * a price change cannot leave it quoting the dearer one.
+     */
+    public static function cheapest(): Plan
+    {
+        /** @var Plan $cheapest */
+        $cheapest = collect(Plan::cases())->sortBy(fn (Plan $plan): float => $plan->price())->first();
+
+        return $cheapest;
+    }
+
+    /**
      * "$5.90/month" — for a page that names one figure with a "from" and leaves
      * the comparison to the pricing page.
      */
     public static function cheapestPerInterval(): string
     {
-        $cheapest = collect(Plan::cases())->sortBy(fn (Plan $plan): float => $plan->price())->first();
-
-        return self::perInterval($cheapest);
+        return self::perInterval(self::cheapest());
     }
 
     /**

@@ -49,8 +49,12 @@
                 <span class="eq-card-title">Dynamic QR</span>
                 <span class="eq-badge eq-badge--dark">PAID</span>
             </div>
+            {{-- One figure, with a "from". The pricing page carries the comparison. --}}
+            @php
+                $cheapestPlan = \App\Support\SubscriptionPrice::cheapest();
+            @endphp
             <p class="eq-price">
-                {{ \App\Support\SubscriptionPrice::formatted(\App\Enums\Plan::Yearly) }}<span class="eq-price-period">per year</span>
+                <span class="eq-price-period">from</span>{{ \App\Support\SubscriptionPrice::formatted($cheapestPlan) }}<span class="eq-price-period">per {{ $cheapestPlan->interval()->value }}</span>
             </p>
             <p class="eq-price-note">
                 {{ config('subscription.trial_days') }}-day free trial, no payment details needed.
@@ -134,11 +138,19 @@
                 goes whenever you like &mdash; and see how many people scanned it.
             </p>
 
+            @php
+                $offerPlan = \App\Support\SubscriptionPrice::cheapest();
+                $offerSaving = \App\Support\SubscriptionPrice::saving(\App\Enums\Plan::Yearly);
+                $offerAlternative = 'or '.\App\Support\SubscriptionPrice::formatted(\App\Enums\Plan::Yearly)
+                    .' a '.\App\Enums\Plan::Yearly->interval()->value
+                    .($offerSaving === null ? '' : ' — save '.$offerSaving).'.';
+            @endphp
+
             <p class="eq-offer-price">
-                {{ \App\Support\SubscriptionPrice::monthlyEquivalent(\App\Enums\Plan::Yearly) }}<span class="eq-offer-period">/month</span>
+                {{ \App\Support\SubscriptionPrice::formatted($offerPlan) }}<span class="eq-offer-period">/{{ $offerPlan->interval()->value }}</span>
             </p>
             <p class="eq-offer-note">
-                Billed {{ \App\Support\SubscriptionPrice::formatted(\App\Enums\Plan::Yearly) }} once a year.
+                {{ $offerAlternative }}
                 {{ config('subscription.trial_days') }}-day free trial, no payment details needed.
             </p>
 

@@ -231,30 +231,35 @@ class StaticOfferTest extends TestCase
     }
 
     /**
-     * Every figure comes from config. The monthly number in particular must be
-     * derived: hardcoding it is how a price change ships a homepage that quotes
-     * the old one.
+     * Every figure comes from config, so a price change cannot ship a homepage
+     * that still quotes the old one.
      */
-    public function test_the_offer_quotes_the_price_from_config(): void
+    public function test_the_offer_quotes_the_prices_from_config(): void
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee(SubscriptionPrice::monthlyEquivalent(Plan::Yearly))
+            ->assertSee(SubscriptionPrice::formatted(Plan::Monthly))
             ->assertSee(SubscriptionPrice::formatted(Plan::Yearly))
             ->assertSee(config('subscription.trial_days').'-day free trial');
     }
 
     /**
-     * The load-bearing pricing test. Nobody is charged the monthly figure and
-     * there is no month they could cancel after, so it is the most misleading
-     * number on the site if it ever appears without the real charge beside it.
-     * PublicPagesTest guards the claims AgentaOS reviews; this guards this one.
+     * The load-bearing pricing test, and the reason it changed. The offer used
+     * to quote the yearly price divided by twelve, a figure nobody is charged
+     * and that no month could be cancelled after, so it was only safe beside
+     * the real annual charge. It now quotes the monthly plan's own price, which
+     * is a real charge, and the yearly sits beside it as the cheaper option.
+     * The derived figure must not reappear on this page.
      */
-    public function test_the_monthly_figure_never_appears_without_the_annual_charge(): void
+    public function test_the_offer_quotes_a_real_charge_with_the_yearly_alternative_beside_it(): void
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('Billed '.SubscriptionPrice::formatted(Plan::Yearly).' once a year');
+            ->assertSee(SubscriptionPrice::formatted(Plan::Monthly))
+            ->assertSee('/month', false)
+            ->assertSee('or '.SubscriptionPrice::formatted(Plan::Yearly).' a year')
+            ->assertSee('— save '.SubscriptionPrice::saving(Plan::Yearly))
+            ->assertDontSee(SubscriptionPrice::monthlyEquivalent(Plan::Yearly));
     }
 
     public function test_the_offer_links_to_registration_carrying_its_ref(): void

@@ -1,7 +1,7 @@
 @extends('layouts.site')
 
 @section('title', 'Pricing - ' . config('app.name'))
-@section('description', 'Static QR codes are free forever. Dynamic QR codes you can edit and track cost ' . \App\Support\SubscriptionPrice::formatted(\App\Enums\Plan::Yearly) . ' per year, tax included, after a ' . config('subscription.trial_days') . '-day free trial.')
+@section('description', 'Static QR codes are free forever. Dynamic QR codes you can edit and track cost ' . \App\Support\SubscriptionPrice::everyPriceInProse() . ', tax included, after a ' . config('subscription.trial_days') . '-day free trial.')
 
 @push('structured-data')
     <script type="application/ld+json">{!! \App\Support\StructuredData::forProduct() !!}</script>
@@ -9,11 +9,20 @@
 
 @section('content')
 
+    @php
+        $yearlyPrice = \App\Support\SubscriptionPrice::formatted(\App\Enums\Plan::Yearly);
+        $monthlyPrice = \App\Support\SubscriptionPrice::formatted(\App\Enums\Plan::Monthly);
+        $yearlyPeriod = \App\Enums\Plan::Yearly->interval()->value;
+        $monthlyPeriod = \App\Enums\Plan::Monthly->interval()->value;
+        $saving = \App\Support\SubscriptionPrice::saving(\App\Enums\Plan::Yearly);
+    @endphp
+
     <div class="eq-hero">
         <h1 class="eq-h1">Pricing</h1>
         <p class="eq-lead">
             Static QR codes are free forever. Dynamic codes — the ones you can edit after
-            printing and track — are {{ \App\Support\SubscriptionPrice::formatted(\App\Enums\Plan::Yearly) }} per year.
+            printing and track — are from {{ $monthlyPrice }} a {{ $monthlyPeriod }},
+            or {{ $yearlyPrice }} a {{ $yearlyPeriod }}@if ($saving !== null), saving {{ $saving }}@endif.
         </p>
     </div>
 
@@ -46,7 +55,13 @@
                 <span class="eq-badge eq-badge--dark">PAID</span>
             </div>
             <p class="eq-price">
-                {{ \App\Support\SubscriptionPrice::formatted(\App\Enums\Plan::Yearly) }}<span class="eq-price-period">per year</span>
+                {{ $yearlyPrice }}<span class="eq-price-period">per {{ $yearlyPeriod }}</span>
+                @if ($saving !== null)
+                    <span class="eq-badge">Save {{ $saving }}</span>
+                @endif
+            </p>
+            <p class="eq-price eq-price--alt">
+                {{ $monthlyPrice }}<span class="eq-price-period">per {{ $monthlyPeriod }}</span>
             </p>
             <p class="eq-price-note">
                 {{ config('subscription.trial_days') }}-day free trial first. No payment
@@ -77,9 +92,11 @@
 
         <h2>What you pay</h2>
         <p>
-            <strong>{{ \App\Support\SubscriptionPrice::formatted(\App\Enums\Plan::Yearly) }} per year.</strong>
-            Billed once a year and renewing automatically until you cancel. Prices are in
-            {{ \App\Support\SubscriptionPrice::currency() }}.
+            <strong>{{ $yearlyPrice }} per {{ $yearlyPeriod }}</strong>, billed once a year,
+            or <strong>{{ $monthlyPrice }} per {{ $monthlyPeriod }}</strong>, billed every month.
+            @if ($saving !== null)Paying yearly costs {{ $saving }} less than twelve monthly payments.@endif
+            Whichever you choose, the plan renews automatically until you cancel it.
+            Prices are in {{ \App\Support\SubscriptionPrice::currency() }}.
         </p>
         <p>
             <strong>Tax is included.</strong> AgentaOS is the merchant of record for every

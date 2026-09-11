@@ -46,7 +46,34 @@ class SubscriptionPriceTest extends TestCase
 
     public function test_the_cheapest_per_interval_is_the_monthly_plan(): void
     {
+        $this->assertSame(Plan::Monthly, SubscriptionPrice::cheapest());
         $this->assertSame('$5.90/month', SubscriptionPrice::cheapestPerInterval());
+    }
+
+    /**
+     * The cheapest plan is whichever costs least per charge, not whichever is
+     * named monthly, so a yearly price cut below the monthly one moves the
+     * "from" figure rather than leaving it quoting the dearer plan.
+     */
+    public function test_the_cheapest_plan_follows_the_prices_not_the_names(): void
+    {
+        config()->set('subscription.plans.yearly.price', 3);
+
+        $this->assertSame(Plan::Yearly, SubscriptionPrice::cheapest());
+        $this->assertSame('$3/year', SubscriptionPrice::cheapestPerInterval());
+    }
+
+    /**
+     * Every plan, cheapest first, each with its own period. Written from
+     * Plan::cases() so a plan added later cannot go unquoted in the three
+     * sentences a machine reads.
+     */
+    public function test_every_price_in_prose_names_each_plan_cheapest_first(): void
+    {
+        $this->assertSame('$5.90 a month or $49 a year', SubscriptionPrice::everyPriceInProse());
+
+        config()->set('subscription.plans.yearly.price', 3);
+        $this->assertSame('$3 a year or $5.90 a month', SubscriptionPrice::everyPriceInProse());
     }
 
     /**

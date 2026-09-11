@@ -37,7 +37,7 @@ The 7-day free period that begins when a User registers, during which their Dyna
 _Avoid_: free plan, freemium (the Trial ends; static codes stay free independently)
 
 **Plan**:
-What a User buys: a billing interval and a price under one name. Two exist, **Monthly** and **Yearly**. A Plan owns its interval by construction — a Plan named monthly cannot bill yearly — while its price and its Payment Link are configuration. Yearly is the default and the one the site leads with; there is no switching between Plans, only cancelling one and buying the other.
+What a User buys: a billing interval and a price under one name. Two exist, **Monthly** and **Yearly**. A Plan owns its interval by construction — a Plan named monthly cannot bill yearly — while its price and its Payment Link are configuration. Yearly is the default and the recommended Plan wherever both prices are shown, always with its saving against twelve monthly charges stated beside them. The homepage teaser is the exception: it quotes the cheapest Plan with a "from" and leaves the comparison to the pricing page. There is no switching between Plans, only cancelling one and buying the other.
 _Avoid_: tier, package (both plans carry the same Quota), billing interval (that is one property of a Plan, not the Plan)
 
 **Subscription**:

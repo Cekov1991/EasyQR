@@ -53,23 +53,43 @@ class StructuredDataTest extends TestCase
     }
 
     /**
-     * The marked-up price against the configured one. These are the two numbers
-     * that must never disagree: one is quoted to a stranger by an assistant, the
-     * other is charged to a card.
+     * The marked-up prices against the configured ones. These are the numbers
+     * that must never disagree: one is quoted to a stranger by an assistant,
+     * the other is charged to a card.
+     *
+     * Both plans are marked up, each with its own billing period, because an
+     * assistant reading a single offer would quote it as the only price there
+     * is.
      */
-    public function test_the_marked_up_price_is_the_configured_price(): void
+    public function test_every_plan_is_marked_up_at_its_configured_price_and_period(): void
     {
         $application = $this->node($this->graphFrom($this->get('/pricing')), 'SoftwareApplication');
 
-        $paid = collect($application['offers'])->firstWhere('price', '!=', '0');
+        $paid = collect($application['offers'])->where('price', '!=', '0')->values();
 
-        $this->assertSame(number_format(Plan::Yearly->price(), 2, '.', ''), $paid['price']);
-        $this->assertSame(config('subscription.currency'), $paid['priceCurrency']);
-        $this->assertTrue(
-            $paid['priceSpecification']['valueAddedTaxIncluded'],
-            'AgentaOS carves destination VAT out of this amount, so the price is tax inclusive.'
-        );
-        $this->assertSame('ANN', $paid['priceSpecification']['unitCode'], 'The subscription is billed yearly.');
+        $this->assertCount(2, $paid, 'Both plans should be offered.');
+
+        $expected = [
+            Plan::Monthly->value => 'MON',
+            Plan::Yearly->value => 'ANN',
+        ];
+
+        foreach (Plan::cases() as $plan) {
+            $offer = $paid->firstWhere('price', number_format($plan->price(), 2, '.', ''));
+
+            $this->assertNotNull($offer, "The {$plan->value} plan is not marked up at its configured price.");
+            $this->assertSame(config('subscription.currency'), $offer['priceCurrency']);
+            $this->assertStringContainsString(
+                $plan->label(),
+                $offer['name'],
+                'Each offer should name the plan it prices, or the two are indistinguishable.'
+            );
+            $this->assertTrue(
+                $offer['priceSpecification']['valueAddedTaxIncluded'],
+                'AgentaOS carves destination VAT out of this amount, so the price is tax inclusive.'
+            );
+            $this->assertSame($expected[$plan->value], $offer['priceSpecification']['unitCode']);
+        }
     }
 
     public function test_the_free_tier_is_marked_up_as_free(): void

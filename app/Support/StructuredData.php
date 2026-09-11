@@ -68,7 +68,11 @@ class StructuredData
                     'Dynamic QR codes with an editable destination',
                     'Scan tracking and analytics',
                 ],
-                'offers' => [self::freeOffer(), self::paidOffer(Plan::Yearly)],
+                'offers' => [
+                    self::freeOffer(),
+                    self::paidOffer(Plan::Monthly),
+                    self::paidOffer(Plan::Yearly),
+                ],
             ],
         ]);
     }
@@ -106,9 +110,12 @@ class StructuredData
     }
 
     /**
-     * The subscription, priced the way it is charged: tax inclusive, because
-     * AgentaOS is merchant of record and carves destination VAT out of this
-     * amount rather than adding it on top.
+     * One plan, priced the way it is charged: tax inclusive, because AgentaOS
+     * is merchant of record and carves destination VAT out of this amount
+     * rather than adding it on top.
+     *
+     * Every plan gets its own offer, each named for the plan it prices. An
+     * assistant reading a lone offer would quote it as the only price there is.
      *
      * @return array<string, mixed>
      */
@@ -119,7 +126,7 @@ class StructuredData
 
         return [
             '@type' => 'Offer',
-            'name' => 'Dynamic QR code subscription',
+            'name' => 'Dynamic QR codes, '.$plan->label(),
             'description' => 'Dynamic QR codes with an editable destination and scan analytics, after a '.config('subscription.trial_days').'-day free trial.',
             'price' => $price,
             'priceCurrency' => $currency,

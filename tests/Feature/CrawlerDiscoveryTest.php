@@ -156,12 +156,19 @@ class CrawlerDiscoveryTest extends TestCase
         }
     }
 
-    public function test_llms_states_the_price_that_is_actually_charged(): void
+    /**
+     * Both prices explicitly, never a "from": this text is written for a
+     * machine that will paraphrase it, and a paraphrase of one price reads as
+     * the only price there is.
+     */
+    public function test_llms_states_both_prices_that_are_actually_charged(): void
     {
         $this->get('/llms.txt')
             ->assertOk()
             ->assertHeader('Content-Type', 'text/plain; charset=UTF-8')
-            ->assertSee(SubscriptionPrice::perInterval(Plan::Yearly), false)
+            ->assertSee(SubscriptionPrice::everyPriceInProse(), false)
+            ->assertSee(SubscriptionPrice::formatted(Plan::Monthly), false)
+            ->assertSee(SubscriptionPrice::formatted(Plan::Yearly), false)
             ->assertSee((string) config('subscription.trial_days').'-day free trial', false);
     }
 

@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Subscription;
 
+use App\Enums\Plan;
+use App\Support\SubscriptionPrice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -74,14 +76,30 @@ class PublicPagesTest extends TestCase
             ->assertSee('Pricing');
     }
 
-    public function test_the_pricing_page_states_the_price_period_and_tax_treatment(): void
+    public function test_the_pricing_page_states_both_prices_their_periods_and_the_tax_treatment(): void
     {
         $this->get('/pricing')
             ->assertOk()
             ->assertSee('$49')
             ->assertSee('per year')
+            ->assertSee('$5.90')
+            ->assertSee('per month')
             ->assertSee('Tax is included')
             ->assertSee('merchant of record');
+    }
+
+    /**
+     * The two prices never sit together without the saving stated, and a
+     * visitor must learn before paying that either one keeps charging until
+     * they cancel. Both are what the AgentaOS review reads the page for.
+     */
+    public function test_the_pricing_page_states_the_yearly_saving_and_that_both_plans_renew(): void
+    {
+        $this->get('/pricing')
+            ->assertOk()
+            ->assertSee('Save '.SubscriptionPrice::saving(Plan::Yearly))
+            ->assertSee('a year, saving '.SubscriptionPrice::saving(Plan::Yearly))
+            ->assertSee('renews automatically until you cancel it');
     }
 
     public function test_the_pricing_page_states_the_trial_needs_no_payment_details(): void
@@ -101,22 +119,36 @@ class PublicPagesTest extends TestCase
             ->assertSee('refund-policy', false);
     }
 
-    public function test_the_homepage_shows_the_dynamic_price_without_logging_in(): void
+    /**
+     * The teaser names one figure with a "from" and sends the visitor to the
+     * pricing page for the comparison. Two prices on a homepage card buy
+     * confusion for no conversion.
+     */
+    public function test_the_homepage_teaser_shows_the_cheapest_price_with_a_from(): void
     {
+        $cheapest = SubscriptionPrice::cheapest();
+
+        $this->assertSame(Plan::Monthly, $cheapest, 'Monthly is the cheapest charge, so it is the "from" price.');
+
         $this->get('/')
             ->assertOk()
-            ->assertSee('$49')
-            ->assertSee('per year');
+            ->assertSee('>from</span>'.SubscriptionPrice::formatted($cheapest), false)
+            ->assertSee('per '.$cheapest->interval()->value);
     }
 
-    public function test_the_pricing_page_follows_the_configured_price(): void
+    public function test_the_pricing_page_follows_the_configured_prices(): void
     {
-        config(['subscription.plans.yearly.price' => 42]);
+        config([
+            'subscription.plans.yearly.price' => 42,
+            'subscription.plans.monthly.price' => 4.50,
+        ]);
 
         $this->get('/pricing')
             ->assertOk()
             ->assertSee('$42')
-            ->assertDontSee('$49');
+            ->assertSee('$4.50')
+            ->assertDontSee('$49')
+            ->assertDontSee('$5.90');
     }
 
     #[DataProvider('publicPageProvider')]
