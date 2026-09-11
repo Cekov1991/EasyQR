@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Plan;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -62,7 +63,7 @@ class StructuredDataTest extends TestCase
 
         $paid = collect($application['offers'])->firstWhere('price', '!=', '0');
 
-        $this->assertSame(number_format((float) config('subscription.price'), 2, '.', ''), $paid['price']);
+        $this->assertSame(number_format(Plan::Yearly->price(), 2, '.', ''), $paid['price']);
         $this->assertSame(config('subscription.currency'), $paid['priceCurrency']);
         $this->assertTrue(
             $paid['priceSpecification']['valueAddedTaxIncluded'],

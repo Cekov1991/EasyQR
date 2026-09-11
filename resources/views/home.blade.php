@@ -50,7 +50,7 @@
                 <span class="eq-badge eq-badge--dark">PAID</span>
             </div>
             <p class="eq-price">
-                {{ \App\Support\SubscriptionPrice::formatted() }}<span class="eq-price-period">per year</span>
+                {{ \App\Support\SubscriptionPrice::formatted(\App\Enums\Plan::Yearly) }}<span class="eq-price-period">per year</span>
             </p>
             <p class="eq-price-note">
                 {{ config('subscription.trial_days') }}-day free trial, no payment details needed.
@@ -135,10 +135,10 @@
             </p>
 
             <p class="eq-offer-price">
-                {{ \App\Support\SubscriptionPrice::monthlyEquivalent() }}<span class="eq-offer-period">/month</span>
+                {{ \App\Support\SubscriptionPrice::monthlyEquivalent(\App\Enums\Plan::Yearly) }}<span class="eq-offer-period">/month</span>
             </p>
             <p class="eq-offer-note">
-                Billed {{ \App\Support\SubscriptionPrice::formatted() }} once a year.
+                Billed {{ \App\Support\SubscriptionPrice::formatted(\App\Enums\Plan::Yearly) }} once a year.
                 {{ config('subscription.trial_days') }}-day free trial, no payment details needed.
             </p>
 

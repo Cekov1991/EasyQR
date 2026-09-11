@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Enums\Plan;
+
 /**
  * What a crawler should and should not fetch.
  *
@@ -34,7 +36,7 @@ class PublicPages
             [
                 'url' => route('pricing'),
                 'title' => 'Pricing',
-                'summary' => 'Static QR codes are free forever. Dynamic QR codes cost '.SubscriptionPrice::perInterval().', tax included, after a '.config('subscription.trial_days').'-day free trial that needs no payment details.',
+                'summary' => 'Static QR codes are free forever. Dynamic QR codes cost '.SubscriptionPrice::perInterval(Plan::Yearly).', tax included, after a '.config('subscription.trial_days').'-day free trial that needs no payment details.',
             ],
             [
                 'url' => route('report.create'),

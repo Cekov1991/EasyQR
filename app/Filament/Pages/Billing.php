@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Enums\Plan;
 use App\Models\Subscription;
 use App\Services\AgentaOS\AgentaOsClient;
 use App\Services\AgentaOS\AgentaOsException;
@@ -31,7 +32,7 @@ class Billing extends Page
 
     public function getFormattedPrice(): string
     {
-        return SubscriptionPrice::formatted();
+        return SubscriptionPrice::formatted(Plan::Yearly);
     }
 
     /**

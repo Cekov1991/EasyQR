@@ -49,7 +49,7 @@ class BillingPageTest extends TestCase
             ->assertOk()
             ->assertSee('Free trial')
             ->assertSee('Subscribe')
-            ->assertSee('$27/year');
+            ->assertSee('$49/year');
     }
 
     public function test_a_lapsed_user_is_offered_reactivation(): void

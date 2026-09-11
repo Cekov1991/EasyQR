@@ -20,7 +20,7 @@ class CheckoutTest extends TestCase
         parent::setUp();
 
         config()->set('services.agentaos.key', 'sk_test_key');
-        config()->set('services.agentaos.payment_link_id', 'link_uuid_123');
+        config()->set('services.agentaos.payment_links.yearly', 'link_uuid_123');
         Http::preventStrayRequests();
     }
 
@@ -179,7 +179,7 @@ class CheckoutTest extends TestCase
 
     public function test_checkout_is_refused_when_no_payment_link_is_configured(): void
     {
-        config()->set('services.agentaos.payment_link_id', null);
+        config()->set('services.agentaos.payment_links.yearly', null);
 
         $user = User::factory()->create();
 

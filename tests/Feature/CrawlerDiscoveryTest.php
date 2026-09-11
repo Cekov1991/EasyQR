@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Plan;
 use App\Support\PublicPages;
 use App\Support\SubscriptionPrice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -160,7 +161,7 @@ class CrawlerDiscoveryTest extends TestCase
         $this->get('/llms.txt')
             ->assertOk()
             ->assertHeader('Content-Type', 'text/plain; charset=UTF-8')
-            ->assertSee(SubscriptionPrice::perInterval(), false)
+            ->assertSee(SubscriptionPrice::perInterval(Plan::Yearly), false)
             ->assertSee((string) config('subscription.trial_days').'-day free trial', false);
     }
 

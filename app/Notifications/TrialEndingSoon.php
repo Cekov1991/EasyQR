@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\Plan;
 use App\Models\User;
 use App\Support\SubscriptionPrice;
 use Illuminate\Bus\Queueable;
@@ -48,7 +49,7 @@ class TrialEndingSoon extends Notification implements ShouldQueue
             : 'After that, you will need a subscription to create dynamic QR codes.');
 
         return $message
-            ->action('Subscribe for '.SubscriptionPrice::perInterval(), route('filament.admin.pages.billing'))
+            ->action('Subscribe for '.SubscriptionPrice::perInterval(Plan::Yearly), route('filament.admin.pages.billing'))
             ->line('Your static QR codes are free forever and are not affected.');
     }
 }

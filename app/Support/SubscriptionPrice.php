@@ -3,9 +3,10 @@
 namespace App\Support;
 
 use App\Enums\BillingInterval;
+use App\Enums\Plan;
 
 /**
- * The subscription price as the customer reads it.
+ * A plan's price as the customer reads it.
  *
  * The same rtrim(rtrim(number_format())) chain was written out four times: on
  * the Filament billing page, in clause 5 of the Terms, and privately inside
@@ -13,10 +14,10 @@ use App\Enums\BillingInterval;
  * currency symbol and the word "year" around it. Nothing made those four
  * agree; they simply did.
  *
- * That is the shape of the bug fixed in 18f75cb, where config named the billing
- * interval and GrantSubscriptionEntitlement independently hardcoded addYear().
- * The interval here comes from BillingInterval, so the period a customer is
- * quoted and the period sent to AgentaOS cannot drift apart.
+ * Every method that renders an amount takes the Plan it is quoting, and takes
+ * it as a required argument. A default would let a call site keep compiling
+ * while silently quoting the yearly price in copy that now has to name both,
+ * which is the failure this class exists to prevent.
  */
 class SubscriptionPrice
 {
@@ -26,67 +27,78 @@ class SubscriptionPrice
     }
 
     /**
-     * "$27" — a whole amount drops its cents, because a round number reads as a
-     * price and "$27.00" reads as a form field.
+     * "$49" or "$5.90" — a whole amount drops its cents, because a round number
+     * reads as a price and "$49.00" reads as a form field.
      *
      * Only an exactly-zero fraction is dropped. The four expressions this method
      * replaced all used rtrim(rtrim($formatted, '0'), '.'), which also eats a
-     * significant trailing zero and renders 27.50 as "27.5" — a malformed price.
-     * It never surfaced because the price has always been a whole number.
-     *
-     * The dollar sign is not decoration either: it is correct only while the
-     * currency is USD, so any other currency is suffixed with its code rather
-     * than being silently mislabelled as dollars.
+     * significant trailing zero and renders 5.90 as "5.9" — a malformed price.
+     * It never surfaced while the only price was a whole number.
      */
-    public static function formatted(): string
+    public static function formatted(Plan $plan): string
     {
-        $amount = number_format((float) config('subscription.price'), 2);
-
-        if (str_ends_with($amount, '.00')) {
-            $amount = substr($amount, 0, -3);
-        }
-
-        return self::currency() === 'USD'
-            ? '$'.$amount
-            : $amount.' '.self::currency();
+        return self::render($plan->price());
     }
 
     /**
-     * "$2.25" — the yearly price divided across the months it covers.
+     * "$4.09" — the yearly price divided across the months it covers.
      *
-     * A smaller number reads as a smaller commitment, which is why the offer
-     * quotes it. That also makes it the most misleading figure on the site if it
-     * ever appears alone: nobody is charged $2.25, and there is no month they
-     * could cancel after. Every caller must put the real charge beside it, and
-     * StaticOfferTest asserts the offer does.
+     * A smaller number reads as a smaller commitment, which is why the saving
+     * is quoted this way. It is also the most misleading figure on the site if
+     * it ever appears alone: nobody is charged $4.09 a month. Every caller must
+     * put the real charge beside it.
      *
      * Rounded up rather than down, and to the cent. Rounding down would quote a
      * price whose twelve instalments come to less than the amount actually taken.
      *
-     * Returns null for any interval that is not yearly. A monthly-billed plan has
-     * no monthly equivalent to derive — the price *is* the monthly figure — and a
-     * silent division by a different period is how a plan change ends up
-     * misquoted on the homepage.
+     * Null for a plan that is not billed yearly. The monthly plan's price is
+     * already the monthly figure, and a silent division by a different period
+     * is how a plan ends up misquoted.
      */
-    public static function monthlyEquivalent(): ?string
+    public static function monthlyEquivalent(Plan $plan): ?string
     {
-        if (BillingInterval::configured() !== BillingInterval::Year) {
+        if ($plan->interval() !== BillingInterval::Year) {
             return null;
         }
 
-        $amount = number_format(ceil((float) config('subscription.price') / 12 * 100) / 100, 2);
-
-        return self::currency() === 'USD'
-            ? '$'.$amount
-            : $amount.' '.self::currency();
+        return self::render(ceil($plan->price() / 12 * 100) / 100);
     }
 
     /**
-     * "$27/year", for the buttons and email actions that need the period in the
+     * "$49/year", for the buttons and email actions that need the period in the
      * same breath as the amount.
      */
-    public static function perInterval(): string
+    public static function perInterval(Plan $plan): string
     {
-        return self::formatted().'/'.BillingInterval::configured()->value;
+        return self::formatted($plan).'/'.$plan->interval()->value;
+    }
+
+    /**
+     * "$5.90/month" — for a page that names one figure with a "from" and leaves
+     * the comparison to the pricing page.
+     */
+    public static function cheapestPerInterval(): string
+    {
+        $cheapest = collect(Plan::cases())->sortBy(fn (Plan $plan): float => $plan->price())->first();
+
+        return self::perInterval($cheapest);
+    }
+
+    /**
+     * The dollar sign is not decoration: it is correct only while the currency
+     * is USD, so any other currency is suffixed with its code rather than being
+     * silently mislabelled as dollars.
+     */
+    private static function render(float $amount): string
+    {
+        $formatted = number_format($amount, 2);
+
+        if (str_ends_with($formatted, '.00')) {
+            $formatted = substr($formatted, 0, -3);
+        }
+
+        return self::currency() === 'USD'
+            ? '$'.$formatted
+            : $formatted.' '.self::currency();
     }
 }

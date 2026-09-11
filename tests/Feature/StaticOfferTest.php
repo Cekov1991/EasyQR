@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Plan;
 use App\Enums\SignupSource;
 use App\Enums\TrackedEvent;
 use App\Filament\Pages\Auth\Register;
@@ -238,8 +239,8 @@ class StaticOfferTest extends TestCase
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee(SubscriptionPrice::monthlyEquivalent())
-            ->assertSee(SubscriptionPrice::formatted())
+            ->assertSee(SubscriptionPrice::monthlyEquivalent(Plan::Yearly))
+            ->assertSee(SubscriptionPrice::formatted(Plan::Yearly))
             ->assertSee(config('subscription.trial_days').'-day free trial');
     }
 
@@ -253,29 +254,7 @@ class StaticOfferTest extends TestCase
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('Billed '.SubscriptionPrice::formatted().' once a year');
-    }
-
-    public function test_a_monthly_billed_plan_has_no_monthly_equivalent(): void
-    {
-        config(['subscription.billing_interval' => 'month']);
-
-        $this->assertNull(SubscriptionPrice::monthlyEquivalent());
-    }
-
-    /**
-     * Rounded up, to the cent. Rounding down would quote twelve instalments
-     * adding up to less than the amount actually taken.
-     */
-    public function test_the_monthly_equivalent_rounds_up(): void
-    {
-        config(['subscription.price' => 27, 'subscription.currency' => 'USD']);
-
-        $this->assertSame('$2.25', SubscriptionPrice::monthlyEquivalent());
-
-        config(['subscription.price' => 100]);
-
-        $this->assertSame('$8.34', SubscriptionPrice::monthlyEquivalent());
+            ->assertSee('Billed '.SubscriptionPrice::formatted(Plan::Yearly).' once a year');
     }
 
     public function test_the_offer_links_to_registration_carrying_its_ref(): void

@@ -60,7 +60,7 @@ class EventRecordingTest extends TestCase
 
     public function test_opening_a_checkout_is_counted(): void
     {
-        config(['services.agentaos.payment_link_id' => 'link_123']);
+        config(['services.agentaos.payment_links.yearly' => 'link_123']);
 
         $this->mock(AgentaOsClient::class)
             ->shouldReceive('createCheckout')
@@ -84,7 +84,7 @@ class EventRecordingTest extends TestCase
      */
     public function test_a_checkout_that_could_not_be_opened_is_not_counted(): void
     {
-        config(['services.agentaos.payment_link_id' => 'link_123']);
+        config(['services.agentaos.payment_links.yearly' => 'link_123']);
 
         $this->mock(AgentaOsClient::class)
             ->shouldReceive('createCheckout')
@@ -99,7 +99,7 @@ class EventRecordingTest extends TestCase
 
     public function test_an_unconfigured_payment_link_is_not_counted_as_a_checkout(): void
     {
-        config(['services.agentaos.payment_link_id' => null]);
+        config(['services.agentaos.payment_links.yearly' => null]);
 
         $this->actingAs(User::factory()->create())
             ->post(route('billing.subscribe'));

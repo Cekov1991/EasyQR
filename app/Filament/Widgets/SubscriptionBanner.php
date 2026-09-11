@@ -3,6 +3,8 @@
 namespace App\Filament\Widgets;
 
 use App\Enums\AccountState;
+use App\Enums\Plan;
+use App\Support\SubscriptionPrice;
 use Filament\Widgets\Widget;
 use Illuminate\Support\Facades\Auth;
 
@@ -44,10 +46,9 @@ class SubscriptionBanner extends Widget
             'description' => $lapsed
                 ? $this->lapsedDescription($user->qrCodes()->where('type', 'dynamic')->count())
                 : 'Your dynamic QR codes are working normally. Subscribe before the trial ends to keep them online.',
-            'action' => $lapsed ? 'Reactivate subscription' : sprintf(
-                'Subscribe for $%s/year',
-                rtrim(rtrim(number_format((float) config('subscription.price'), 2), '0'), '.'),
-            ),
+            'action' => $lapsed
+                ? 'Reactivate subscription'
+                : 'Subscribe for '.SubscriptionPrice::perInterval(Plan::Yearly),
         ];
     }
 

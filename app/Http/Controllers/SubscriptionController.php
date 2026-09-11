@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Plan;
 use App\Enums\TrackedEvent;
 use App\Models\Subscription;
 use App\Services\AgentaOS\AgentaOsClient;
@@ -20,12 +21,13 @@ class SubscriptionController extends Controller
     public function checkout(): RedirectResponse
     {
         $user = Auth::user();
-        $linkId = config('services.agentaos.payment_link_id');
+        $plan = Plan::default();
+        $linkId = $plan->paymentLinkId();
 
-        if (blank($linkId)) {
+        if ($linkId === null) {
             BillingAlerts::raise(
                 'payment-link-missing',
-                'AGENTAOS_PAYMENT_LINK_ID is not configured, so nobody can subscribe.',
+                $plan->paymentLinkEnvironmentVariable().' is not configured, so nobody can subscribe.',
             );
 
             return back()->with('error', 'Subscriptions are temporarily unavailable. Please try again later.');

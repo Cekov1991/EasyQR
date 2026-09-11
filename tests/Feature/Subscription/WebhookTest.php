@@ -237,16 +237,17 @@ class WebhookTest extends TestCase
     }
 
     /**
-     * The interval is declared once, in config. The grant job used to hardcode
-     * `addYear()` beside it, so changing the config would have billed one period
-     * and granted another — silently, and in the customer's favour.
+     * The interval is a property of the plan. The grant job used to hardcode
+     * `addYear()` beside a configured interval, so changing the config would
+     * have billed one period and granted another — silently, and in the
+     * customer's favour.
      *
      * No remote subscription matches here, so the resolve job cannot overwrite
      * the provisional clock and it is the provisional clock being asserted.
      */
-    public function test_the_provisional_grant_follows_the_configured_interval(): void
+    public function test_the_provisional_grant_follows_the_default_plans_interval(): void
     {
-        config()->set('subscription.billing_interval', 'month');
+        config()->set('subscription.default_plan', 'monthly');
         config()->set('subscription.grace_days', 7);
 
         $user = User::factory()->create();

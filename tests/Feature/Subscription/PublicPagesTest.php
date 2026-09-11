@@ -23,7 +23,7 @@ class PublicPagesTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('7-day');
-        $response->assertSee('$27');
+        $response->assertSee('$49');
         $response->assertDontSee('[Currency]');
         $response->assertDontSee('Paid extensions');
     }
@@ -78,7 +78,7 @@ class PublicPagesTest extends TestCase
     {
         $this->get('/pricing')
             ->assertOk()
-            ->assertSee('$27')
+            ->assertSee('$49')
             ->assertSee('per year')
             ->assertSee('Tax is included')
             ->assertSee('merchant of record');
@@ -105,18 +105,18 @@ class PublicPagesTest extends TestCase
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('$27')
+            ->assertSee('$49')
             ->assertSee('per year');
     }
 
     public function test_the_pricing_page_follows_the_configured_price(): void
     {
-        config(['subscription.price' => 42]);
+        config(['subscription.plans.yearly.price' => 42]);
 
         $this->get('/pricing')
             ->assertOk()
             ->assertSee('$42')
-            ->assertDontSee('$27');
+            ->assertDontSee('$49');
     }
 
     #[DataProvider('publicPageProvider')]

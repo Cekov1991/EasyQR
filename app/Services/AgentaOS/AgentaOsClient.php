@@ -2,7 +2,7 @@
 
 namespace App\Services\AgentaOS;
 
-use App\Enums\BillingInterval;
+use App\Enums\Plan;
 use App\Models\User;
 use Generator;
 use Illuminate\Http\Client\ConnectionException;
@@ -30,25 +30,29 @@ class AgentaOsClient
     ) {}
 
     /**
-     * Creates the single product-wide subscription payment link. Run once per
-     * environment; the returned id belongs in AGENTAOS_PAYMENT_LINK_ID.
+     * Creates the payment link for one plan. Run once per plan per environment;
+     * the returned id belongs in that plan's AGENTAOS_*_PAYMENT_LINK_ID.
+     *
+     * The amount and interval are fixed on the link at creation. Changing the
+     * plan's configured price afterwards changes what the site displays, not
+     * what this link charges — the link has to be recreated.
      *
      * @return array<string, mixed>
      */
-    public function createSubscriptionPaymentLink(string $name, string $description): array
+    public function createSubscriptionPaymentLink(Plan $plan, string $name, string $description): array
     {
         return $this->send('post', '/gateway/payment-links', [
-            'amount' => (float) config('subscription.price'),
+            'amount' => $plan->price(),
             'currency' => config('subscription.currency'),
             'name' => $name,
             'description' => $description,
             'type' => 'subscription',
-            'billingInterval' => BillingInterval::configured()->value,
+            'billingInterval' => $plan->interval()->value,
         ]);
     }
 
     /**
-     * Opens a checkout for one specific user against the product-wide link.
+     * Opens a checkout for one specific user against a plan's link.
      *
      * The user id rides in `metadata`, which AgentaOS returns unchanged on the
      * webhook. That is the only way the resulting payment can be attributed —

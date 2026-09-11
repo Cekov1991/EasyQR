@@ -2,15 +2,20 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\Plan;
 use App\Services\AgentaOS\AgentaOsClient;
 use App\Services\AgentaOS\AgentaOsException;
 use Illuminate\Console\Command;
 
 /**
- * Creates the single product-wide subscription payment link.
+ * Creates a plan's subscription payment link at AgentaOS.
  *
- * Run once per environment. A command rather than dashboard clicks so that
- * test mode and live mode are created identically and reproducibly.
+ * Run once per plan per environment. A command rather than dashboard clicks so
+ * that test mode and live mode are created identically and reproducibly. The
+ * amount and interval are fixed on the link when it is created, so a price
+ * change means running this again and swapping the id.
+ *
+ * Only the yearly link can be created for now; a plan argument follows.
  */
 class CreateAgentaOsPaymentLink extends Command
 {
@@ -28,7 +33,9 @@ class CreateAgentaOsPaymentLink extends Command
             return self::FAILURE;
         }
 
-        $name = $this->option('name') ?: config('app.name').' Yearly';
+        $plan = Plan::Yearly;
+
+        $name = $this->option('name') ?: config('app.name').' '.$plan->label();
         $description = $this->option('description')
             ?: sprintf(
                 'Keeps your dynamic QR codes online. Up to %d dynamic and %d static QR codes.',
@@ -38,12 +45,12 @@ class CreateAgentaOsPaymentLink extends Command
 
         $this->components->info(sprintf(
             'Creating a %s %s subscription link…',
-            number_format((float) config('subscription.price'), 2),
+            number_format($plan->price(), 2),
             config('subscription.currency'),
         ));
 
         try {
-            $link = $agentaOs->createSubscriptionPaymentLink($name, $description);
+            $link = $agentaOs->createSubscriptionPaymentLink($plan, $name, $description);
         } catch (AgentaOsException $exception) {
             $this->components->error($exception->getMessage());
 
@@ -60,7 +67,7 @@ class CreateAgentaOsPaymentLink extends Command
         $this->components->twoColumnDetail('Checkout URL', $link['checkoutUrl'] ?? 'none');
         $this->newLine();
         $this->line('Add this to your .env:');
-        $this->line("  AGENTAOS_PAYMENT_LINK_ID={$link['id']}");
+        $this->line("  {$plan->paymentLinkEnvironmentVariable()}={$link['id']}");
         $this->newLine();
 
         return self::SUCCESS;

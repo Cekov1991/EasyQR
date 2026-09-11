@@ -118,7 +118,7 @@ class BillingAlertTest extends TestCase
         ]);
 
         config()->set('services.agentaos.key', 'sk_test_key');
-        config()->set('services.agentaos.payment_link_id', 'link_uuid_123');
+        config()->set('services.agentaos.payment_links.yearly', 'link_uuid_123');
 
         $this->actingAs(User::factory()->create())
             ->post('/billing/subscribe')

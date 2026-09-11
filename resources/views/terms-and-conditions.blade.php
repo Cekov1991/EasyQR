@@ -74,7 +74,7 @@
             </li>
             <li>
                 After the trial, keeping dynamic QR codes active requires a subscription costing
-                {{ \App\Support\SubscriptionPrice::formatted() }}
+                {{ \App\Support\SubscriptionPrice::formatted(\App\Enums\Plan::Yearly) }}
                 per year. Prices are in {{ \App\Support\SubscriptionPrice::currency() }} and include any applicable
                 VAT or sales tax. Our <a href="{{ route('pricing') }}">Pricing page</a> sets this out in full.
             </li>

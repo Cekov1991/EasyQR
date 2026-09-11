@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\Plan;
 use App\Models\User;
 use App\Support\SubscriptionPrice;
 use Illuminate\Bus\Queueable;
@@ -57,7 +58,7 @@ class TrialEnded extends Notification implements ShouldQueue
         }
 
         return $message
-            ->action('Reactivate for '.SubscriptionPrice::perInterval(), route('filament.admin.pages.billing'))
+            ->action('Reactivate for '.SubscriptionPrice::perInterval(Plan::Yearly), route('filament.admin.pages.billing'))
             ->line('Everything is exactly where you left it, and your static QR codes are unaffected.');
     }
 
