@@ -121,8 +121,9 @@
             already paid for.
         </p>
         <p>
-            If you subscribe and change your mind, you have 14 days to ask for a full refund.
-            The details are in our <a href="{{ url('/refund-policy') }}">Refund Policy</a>.
+            If you subscribe and change your mind, you have 14 days to ask for a full refund
+            on your first payment on a plan. The details are in our
+            <a href="{{ url('/refund-policy') }}">Refund Policy</a>.
         </p>
 
         <h2>What happens if I stop paying?</h2>

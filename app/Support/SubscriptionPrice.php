@@ -107,11 +107,13 @@ class SubscriptionPrice
      * "$5.90 a month or $49 a year" — every plan's price in prose, cheapest
      * first, each with the period its own plan is billed on.
      *
-     * For the three places that state the price to a machine rather than to a
-     * reader: the pricing page's meta description, the crawler summary and the
-     * llms.txt an assistant paraphrases. None of them may say "from", because
-     * a paraphrase of one price reads as the only price there is, and all three
-     * must say it in the same words, which is what this method is for.
+     * For every sentence that has to name both plans rather than lead with
+     * one: the pricing page's meta description, the crawler summary, the
+     * llms.txt an assistant paraphrases, clause 5 of the Terms, and the two
+     * trial emails sent before a customer has chosen anything. None of them
+     * may say "from", because one price quoted alone reads as the only price
+     * there is, and all of them must say it in the same words, which is what
+     * this method is for.
      *
      * Built from every Plan rather than by naming two, so a third plan cannot
      * be sold while these three sentences quietly go on quoting two.
@@ -124,6 +126,20 @@ class SubscriptionPrice
             ->all();
 
         return implode(' or ', $quotes);
+    }
+
+    /**
+     * "$5.90 a month or $49 a year, tax included" — the phrase every sentence
+     * quoting both plans is built around.
+     *
+     * Tax inclusivity is not decoration on these prices: AgentaOS is merchant
+     * of record and carves destination VAT out of the amount rather than
+     * adding it at checkout, so a quote that omits it promises a total the
+     * buyer will not be charged.
+     */
+    public static function everyPriceTaxIncluded(): string
+    {
+        return self::everyPriceInProse().', tax included';
     }
 
     /**

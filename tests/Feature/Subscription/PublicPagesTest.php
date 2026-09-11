@@ -615,4 +615,77 @@ class PublicPagesTest extends TestCase
             ->assertDontSee('7-day validity')
             ->assertSee('Static QR codes');
     }
+
+    public function test_the_terms_name_both_prices_and_describe_renewal_per_billing_period(): void
+    {
+        $this->get('/terms-and-conditions')
+            ->assertOk()
+            ->assertSee(SubscriptionPrice::formatted(Plan::Monthly))
+            ->assertSee(SubscriptionPrice::formatted(Plan::Yearly))
+            ->assertSee('at the end of each billing period')
+            ->assertDontSee('renews automatically each year');
+    }
+
+    /**
+     * The 14-day window is scoped to a first payment on a plan, and the reason
+     * is arithmetic: carried over to a monthly plan, a window covering every
+     * renewal would make roughly half of every month refundable, so a monthly
+     * subscription would be refundable essentially all the time.
+     */
+    public function test_the_refund_window_covers_a_first_payment_on_a_plan_not_every_renewal(): void
+    {
+        $this->get('/refund-policy')
+            ->assertOk()
+            ->assertSee('14 days')
+            ->assertSee('first payment')
+            ->assertDontSee('to each yearly renewal');
+    }
+
+    /**
+     * A statutory right is not ours to reword, so it is pinned verbatim.
+     */
+    public function test_the_refund_policy_keeps_the_statutory_withdrawal_sentence(): void
+    {
+        $this->get('/refund-policy')
+            ->assertOk()
+            ->assertSee('If you are a consumer in the EU or UK, this reflects your statutory right of');
+    }
+
+    public function test_the_refund_policy_does_not_assume_a_yearly_period_after_the_window(): void
+    {
+        $this->get('/refund-policy')
+            ->assertOk()
+            ->assertSee('the remainder of the period')
+            ->assertDontSee('the remainder of a yearly period')
+            ->assertSee('refund a fair');
+    }
+
+    /**
+     * The pricing page and the refund policy must not contradict each other on
+     * what the window covers, because the pricing page is the one a buyer
+     * reads before paying.
+     */
+    public function test_the_pricing_pages_refund_sentence_matches_the_refund_policy(): void
+    {
+        $this->get('/pricing')
+            ->assertOk()
+            ->assertSee('on your first payment');
+    }
+
+    /**
+     * Clause 10 of the Terms promises that changes are posted "with a new
+     * 'Last updated' date". Narrowing the refund window while both documents
+     * still carry their old date breaks that promise on the same page that
+     * makes it, and it is the first thing a merchant-of-record reviewer checks.
+     */
+    public function test_the_documents_changed_by_the_two_plan_work_carry_a_current_date(): void
+    {
+        foreach (['/terms-and-conditions', '/refund-policy'] as $path) {
+            $this->get($path)
+                ->assertOk()
+                ->assertSee('Last updated 11 September 2026')
+                ->assertDontSee('Last updated 13 August 2026')
+                ->assertDontSee('Last updated 14 August 2026');
+        }
+    }
 }

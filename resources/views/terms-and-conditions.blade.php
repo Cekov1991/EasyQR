@@ -8,7 +8,7 @@
     <div class="eq-prose">
         <h1 class="eq-h1">Terms and Conditions</h1>
         <p class="eq-prose-updated">
-            Last updated 14 August 2026 · {{ config('site.domain') }} · Operated by {{ config('site.operator.name') }}
+            Last updated 11 September 2026 · {{ config('site.domain') }} · Operated by {{ config('site.operator.name') }}
         </p>
 
         <h2>1. Introduction</h2>
@@ -74,13 +74,14 @@
             </li>
             <li>
                 After the trial, keeping dynamic QR codes active requires a subscription costing
-                {{ \App\Support\SubscriptionPrice::formatted(\App\Enums\Plan::Yearly) }}
-                per year. Prices are in {{ \App\Support\SubscriptionPrice::currency() }} and include any applicable
+                {{ \App\Support\SubscriptionPrice::everyPriceInProse() }}.
+                Prices are in {{ \App\Support\SubscriptionPrice::currency() }} and include any applicable
                 VAT or sales tax. Our <a href="{{ route('pricing') }}">Pricing page</a> sets this out in full.
             </li>
             <li>
-                The subscription renews automatically each year until cancelled. You may cancel at any time from
-                your account, and you keep access until the end of the period you have already paid for.
+                The subscription renews automatically at the end of each billing period (monthly or yearly,
+                whichever you chose) until cancelled. You may cancel at any time from your account, and you
+                keep access until the end of the period you have already paid for.
             </li>
             <li>
                 Payments are processed by AgentaOS, which acts as merchant of record and issues your invoice

@@ -7,7 +7,7 @@
 
     <div class="eq-prose">
         <h1 class="eq-h1">Refund Policy</h1>
-        <p class="eq-prose-updated">Last updated 13 August 2026</p>
+        <p class="eq-prose-updated">Last updated 11 September 2026</p>
 
         <h2>1. The free trial comes first</h2>
         <p>
@@ -19,8 +19,12 @@
         <h2>2. 14-day refund window</h2>
         <p>
             If you subscribe and change your mind, contact us within <strong>14 days</strong> of
-            the payment and we will refund it in full. This applies to a first subscription and
-            to each yearly renewal.
+            your first payment on a plan and we will refund it in full, no reason needed.
+        </p>
+        <p>
+            A renewal is not a fresh purchase. It continues a subscription you have already had
+            a full billing period to evaluate, and stopping it before it is charged takes two
+            clicks from the Subscription page, so renewals sit outside this window.
         </p>
         <p>
             If you are a consumer in the EU or UK, this reflects your statutory right of
@@ -29,7 +33,7 @@
 
         <h2>3. After 14 days</h2>
         <p>
-            We do not refund the remainder of a yearly period once the window has passed.
+            We do not refund the remainder of the period once the window has passed.
             You can cancel at any time to stop the next renewal, and you keep full access
             until the end of the period you have already paid for.
         </p>
