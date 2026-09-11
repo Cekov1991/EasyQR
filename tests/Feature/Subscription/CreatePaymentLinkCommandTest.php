@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Subscription;
 
+use App\Enums\Plan;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -22,6 +23,7 @@ class CreatePaymentLinkCommandTest extends TestCase
 
         config()->set('services.agentaos.key', 'sk_test_key');
         config()->set('subscription.currency', 'USD');
+        config()->set('subscription.plans.monthly.price', 5.90);
         config()->set('subscription.plans.yearly.price', 49);
         Http::preventStrayRequests();
     }
@@ -36,7 +38,7 @@ class CreatePaymentLinkCommandTest extends TestCase
             ]),
         ]);
 
-        $this->artisan('agentaos:create-payment-link')
+        $this->artisan('agentaos:create-payment-link', ['plan' => 'yearly'])
             ->expectsOutputToContain('AGENTAOS_YEARLY_PAYMENT_LINK_ID=link_yearly_123')
             ->assertSuccessful();
 
@@ -46,11 +48,41 @@ class CreatePaymentLinkCommandTest extends TestCase
             && $request['billingInterval'] === 'year');
     }
 
+    public function test_the_monthly_link_is_created_with_the_monthly_plans_amount_and_interval(): void
+    {
+        Http::fake([
+            '*/gateway/payment-links' => Http::response([
+                'id' => 'link_monthly_456',
+                'environment' => 'test',
+                'checkoutUrl' => 'https://pay.example/link_monthly_456',
+            ]),
+        ]);
+
+        $this->artisan('agentaos:create-payment-link', ['plan' => 'monthly'])
+            ->expectsOutputToContain('AGENTAOS_MONTHLY_PAYMENT_LINK_ID=link_monthly_456')
+            ->doesntExpectOutputToContain('AGENTAOS_YEARLY_PAYMENT_LINK_ID')
+            ->assertSuccessful();
+
+        Http::assertSent(fn (Request $request): bool => $request['amount'] === 5.9
+            && $request['billingInterval'] === 'month'
+            && str_ends_with($request['name'], ' '.Plan::Monthly->label()));
+    }
+
+    public function test_a_plan_this_app_does_not_sell_is_rejected_before_any_request_is_made(): void
+    {
+        $this->artisan('agentaos:create-payment-link', ['plan' => 'weekly'])
+            ->expectsOutputToContain('weekly')
+            ->expectsOutputToContain('monthly, yearly')
+            ->assertFailed();
+
+        Http::assertNothingSent();
+    }
+
     public function test_it_refuses_to_run_without_an_api_key(): void
     {
         config()->set('services.agentaos.key', null);
 
-        $this->artisan('agentaos:create-payment-link')->assertFailed();
+        $this->artisan('agentaos:create-payment-link', ['plan' => 'yearly'])->assertFailed();
 
         Http::assertNothingSent();
     }
@@ -61,7 +93,7 @@ class CreatePaymentLinkCommandTest extends TestCase
             '*/gateway/payment-links' => Http::response(['message' => 'amount must be positive'], 400),
         ]);
 
-        $this->artisan('agentaos:create-payment-link')
+        $this->artisan('agentaos:create-payment-link', ['plan' => 'yearly'])
             ->expectsOutputToContain('amount must be positive')
             ->assertFailed();
     }

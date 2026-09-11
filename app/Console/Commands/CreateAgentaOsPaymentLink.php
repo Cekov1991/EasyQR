@@ -15,25 +15,35 @@ use Illuminate\Console\Command;
  * amount and interval are fixed on the link when it is created, so a price
  * change means running this again and swapping the id.
  *
- * Only the yearly link can be created for now; a plan argument follows.
+ * The plan is an argument and the confirmation names that plan's env variable,
+ * so a copy-paste cannot land the monthly id in the yearly slot.
  */
 class CreateAgentaOsPaymentLink extends Command
 {
     protected $signature = 'agentaos:create-payment-link
+                            {plan : Which plan the link charges: monthly or yearly}
                             {--name= : Product name shown at checkout}
                             {--description= : Longer description shown at checkout}';
 
-    protected $description = 'Create the yearly subscription payment link at AgentaOS';
+    protected $description = 'Create one plan\'s subscription payment link at AgentaOS';
 
     public function handle(AgentaOsClient $agentaOs): int
     {
+        $requestedPlan = (string) $this->argument('plan');
+        $plan = Plan::tryFrom($requestedPlan);
+
+        if ($plan === null) {
+            $this->components->error(sprintf('Unknown plan "%s".', $requestedPlan));
+            $this->line('  Choose one of: '.implode(', ', array_column(Plan::cases(), 'value')).'.');
+
+            return self::FAILURE;
+        }
+
         if (blank(config('services.agentaos.key'))) {
             $this->components->error('AGENTAOS_API_KEY is not configured.');
 
             return self::FAILURE;
         }
-
-        $plan = Plan::Yearly;
 
         $name = $this->option('name') ?: config('app.name').' '.$plan->label();
         $description = $this->option('description')
