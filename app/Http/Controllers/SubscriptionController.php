@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\Plan;
 use App\Enums\TrackedEvent;
+use App\Http\Requests\StartCheckoutRequest;
 use App\Models\Subscription;
 use App\Services\AgentaOS\AgentaOsClient;
 use App\Services\AgentaOS\AgentaOsException;
@@ -16,18 +16,24 @@ class SubscriptionController extends Controller
     public function __construct(private readonly AgentaOsClient $agentaOs) {}
 
     /**
-     * Opens an AgentaOS checkout for the signed-in user and sends them to it.
+     * Opens an AgentaOS checkout for the signed-in user on the Plan they chose
+     * and sends them to it.
      */
-    public function checkout(): RedirectResponse
+    public function checkout(StartCheckoutRequest $request): RedirectResponse
     {
         $user = Auth::user();
-        $plan = Plan::default();
+        $plan = $request->plan();
         $linkId = $plan->paymentLinkId();
 
         if ($linkId === null) {
             BillingAlerts::raise(
                 'payment-link-missing',
-                $plan->paymentLinkEnvironmentVariable().' is not configured, so nobody can subscribe.',
+                sprintf(
+                    '%s is not configured, so nobody can subscribe %s.',
+                    $plan->paymentLinkEnvironmentVariable(),
+                    $plan->value,
+                ),
+                ['plan' => $plan->value],
             );
 
             return back()->with('error', 'Subscriptions are temporarily unavailable. Please try again later.');
@@ -40,8 +46,9 @@ class SubscriptionController extends Controller
             // only sees a vague apology, so this must not sit in the log alone.
             BillingAlerts::raise(
                 'checkout-creation-failed',
-                'An AgentaOS checkout could not be created. Nobody hitting this can subscribe.',
+                sprintf('An AgentaOS checkout could not be created. Nobody hitting this can subscribe %s.', $plan->value),
                 [
+                    'plan' => $plan->value,
                     'user_id' => $user->getKey(),
                     'status' => $exception->status,
                     'request_id' => $exception->requestId,
@@ -58,6 +65,7 @@ class SubscriptionController extends Controller
             ['checkout_session_id' => $checkout['session_id']],
             [
                 'user_id' => $user->getKey(),
+                'plan' => $plan,
                 'status' => 'incomplete',
                 'currency' => $checkout['currency'] ?? config('subscription.currency'),
             ],

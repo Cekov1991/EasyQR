@@ -2,7 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Enums\Plan;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\BillingAlerts;
@@ -72,9 +71,12 @@ class GrantSubscriptionEntitlement implements ShouldQueue
             'agentaos_subscription_id' => $this->remoteSubscriptionId($subscription),
         ])->save();
 
-        // Provisional: one billing interval from now. The follow-up job
-        // replaces this with the period end AgentaOS actually recorded.
-        $user->grantEntitlementThrough(Plan::default()->interval()->endFrom(now()));
+        // Provisional: one period of the plan this row was bought under, from
+        // now. Read from the saved row, never from config: the entitlement date
+        // only moves forward, so a month granted as a year could never be
+        // corrected. The follow-up job replaces this with the period end
+        // AgentaOS actually recorded.
+        $user->grantEntitlementThrough($subscription->planOrDefault()->interval()->endFrom(now()));
 
         ResolveAgentaOsSubscription::dispatch($subscription);
     }

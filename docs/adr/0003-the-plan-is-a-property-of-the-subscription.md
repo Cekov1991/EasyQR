@@ -1,6 +1,6 @@
 # The plan is a property of the subscription
 
-**Status:** accepted. The `Plan` enum, per-plan config and plan-aware pricing are in place. The `subscriptions.plan` column and the grant that reads it land with the checkout work in [the two-plans implementation plan](../subscription-plans-implementation-plan.md), Phase 3; until then the grant reads the configured default plan, which is correct only while yearly is the only plan sold.
+**Status:** accepted. The `Plan` enum, per-plan config and plan-aware pricing are in place, and a checkout must name its Plan: the chosen Plan selects the payment link, is stored on `subscriptions.plan`, and is what the paid-webhook grant reads one period of. A row without a Plan — a checkout this app did not open — is granted on the configured default. The billing page still offers yearly only until the customer can choose, per [the two-plans implementation plan](../subscription-plans-implementation-plan.md).
 
 Which Plan a customer bought — and therefore how long one payment entitles them for — is recorded on the Subscription row and read from there. It is never read from a global config value, and the billing interval is not configurable at all: it is fixed per Plan in code (`App\Enums\Plan::interval()`), by `match`. Prices and AgentaOS payment link ids stay in config, keyed per Plan, because they change without a deploy.
 

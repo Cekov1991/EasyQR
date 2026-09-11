@@ -85,6 +85,7 @@
 
                 <form method="POST" action="{{ route('billing.subscribe') }}">
                     @csrf
+                    <input type="hidden" name="plan" value="{{ $this->getOfferedPlan()->value }}">
                     <x-filament::button type="submit" size="lg">
                         {{ $state->value === 'lapsed' ? 'Reactivate' : 'Subscribe' }}
                         for {{ $this->getFormattedPrice() }}/year

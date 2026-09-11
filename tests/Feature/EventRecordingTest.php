@@ -72,7 +72,7 @@ class EventRecordingTest extends TestCase
             ]);
 
         $this->actingAs(User::factory()->create())
-            ->post(route('billing.subscribe'))
+            ->post(route('billing.subscribe'), ['plan' => 'yearly'])
             ->assertRedirect('https://checkout.example/sess_123');
 
         $this->assertRecordedOnce(TrackedEvent::CheckoutStarted);
@@ -92,7 +92,7 @@ class EventRecordingTest extends TestCase
             ->andThrow(new AgentaOsException('Upstream is down'));
 
         $this->actingAs(User::factory()->create())
-            ->post(route('billing.subscribe'));
+            ->post(route('billing.subscribe'), ['plan' => 'yearly']);
 
         $this->assertSame(0, SiteEvent::query()->named(TrackedEvent::CheckoutStarted)->count());
     }
@@ -102,7 +102,7 @@ class EventRecordingTest extends TestCase
         config(['services.agentaos.payment_links.yearly' => null]);
 
         $this->actingAs(User::factory()->create())
-            ->post(route('billing.subscribe'));
+            ->post(route('billing.subscribe'), ['plan' => 'yearly']);
 
         $this->assertSame(0, SiteEvent::query()->named(TrackedEvent::CheckoutStarted)->count());
     }

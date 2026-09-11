@@ -30,9 +30,18 @@ class Billing extends Page
         return Auth::user()->currentSubscription();
     }
 
+    /**
+     * The one plan this page sells until the customer can choose; the price
+     * quoted, the copy and the plan posted all read from here so they agree.
+     */
+    public function getOfferedPlan(): Plan
+    {
+        return Plan::Yearly;
+    }
+
     public function getFormattedPrice(): string
     {
-        return SubscriptionPrice::formatted(Plan::Yearly);
+        return SubscriptionPrice::formatted($this->getOfferedPlan());
     }
 
     /**

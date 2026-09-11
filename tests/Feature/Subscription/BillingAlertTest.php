@@ -121,7 +121,7 @@ class BillingAlertTest extends TestCase
         config()->set('services.agentaos.payment_links.yearly', 'link_uuid_123');
 
         $this->actingAs(User::factory()->create())
-            ->post('/billing/subscribe')
+            ->post('/billing/subscribe', ['plan' => 'yearly'])
             ->assertSessionHas('error');
 
         Notification::assertSentOnDemand(BillingAlert::class);
