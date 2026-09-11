@@ -3,7 +3,6 @@
 namespace App\Filament\Widgets;
 
 use App\Enums\AccountState;
-use App\Enums\Plan;
 use App\Support\SubscriptionPrice;
 use Filament\Widgets\Widget;
 use Illuminate\Support\Facades\Auth;
@@ -27,6 +26,9 @@ class SubscriptionBanner extends Widget
     }
 
     /**
+     * The subscribe label names one figure with a "from", because the billing
+     * page it links to is where the two plans are compared and chosen.
+     *
      * @return array<string, mixed>
      */
     protected function getViewData(): array
@@ -48,7 +50,7 @@ class SubscriptionBanner extends Widget
                 : 'Your dynamic QR codes are working normally. Subscribe before the trial ends to keep them online.',
             'action' => $lapsed
                 ? 'Reactivate subscription'
-                : 'Subscribe for '.SubscriptionPrice::perInterval(Plan::Yearly),
+                : 'Subscribe from '.SubscriptionPrice::cheapestPerInterval(),
         ];
     }
 

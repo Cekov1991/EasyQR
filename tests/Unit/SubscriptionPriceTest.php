@@ -71,6 +71,36 @@ class SubscriptionPriceTest extends TestCase
     }
 
     /**
+     * "30%" — what a year costs against twelve months, rounded down so the
+     * saving is never overstated: $49 against $70.80 is 30.8%.
+     */
+    public function test_the_yearly_saving_against_monthly_is_rounded_down(): void
+    {
+        $this->assertSame('30%', SubscriptionPrice::saving(Plan::Yearly));
+
+        config()->set('subscription.plans.yearly.price', 35.40);
+        $this->assertSame('50%', SubscriptionPrice::saving(Plan::Yearly));
+    }
+
+    /**
+     * The monthly plan is what the saving is measured against, so it has none
+     * of its own to claim.
+     */
+    public function test_the_monthly_plan_has_no_saving_to_state(): void
+    {
+        $this->assertNull(SubscriptionPrice::saving(Plan::Monthly));
+    }
+
+    public function test_a_year_that_costs_no_less_than_twelve_months_has_no_saving_to_state(): void
+    {
+        config()->set('subscription.plans.yearly.price', 70.80);
+        $this->assertNull(SubscriptionPrice::saving(Plan::Yearly));
+
+        config()->set('subscription.plans.yearly.price', 80);
+        $this->assertNull(SubscriptionPrice::saving(Plan::Yearly));
+    }
+
+    /**
      * A dollar sign in front of a non-USD amount is a misstatement of price, and
      * price is the one thing AgentaOS reviews us on as merchant of record.
      */

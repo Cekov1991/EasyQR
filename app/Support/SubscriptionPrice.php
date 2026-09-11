@@ -65,6 +65,36 @@ class SubscriptionPrice
     }
 
     /**
+     * "30%" — how much less this plan costs than twelve months of the monthly
+     * plan, for the places both prices sit side by side and this one is being
+     * recommended.
+     *
+     * Rounded down to a whole percent, so the saving is never overstated: a
+     * buyer who checks the arithmetic must find at least what was promised.
+     *
+     * Null for a plan that is not billed yearly, including the monthly plan
+     * itself, which is the thing the saving is measured against. Null too when
+     * a year costs no less than twelve months, because a saving of nothing is
+     * a claim that must not be printed.
+     */
+    public static function saving(Plan $plan): ?string
+    {
+        if ($plan->interval() !== BillingInterval::Year) {
+            return null;
+        }
+
+        $twelveMonths = Plan::Monthly->price() * 12;
+
+        if ($twelveMonths <= 0) {
+            return null;
+        }
+
+        $percent = (int) floor((1 - $plan->price() / $twelveMonths) * 100);
+
+        return $percent > 0 ? $percent.'%' : null;
+    }
+
+    /**
      * "$49/year", for the buttons and email actions that need the period in the
      * same breath as the amount.
      */
