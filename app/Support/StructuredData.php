@@ -3,11 +3,12 @@
 namespace App\Support;
 
 use App\Enums\BillingInterval;
+use App\Enums\Plan;
 
 /**
  * The JSON-LD an AI crawler and a search engine read instead of guessing.
  *
- * Prose tells a reader that dynamic codes cost twenty-seven dollars a year; this
+ * Prose tells a reader that dynamic codes cost forty-nine dollars a year; this
  * says it in the one vocabulary a machine does not have to parse out of a
  * sentence. It matters here because an assistant answering "what does it cost"
  * is quoting whatever it can state with confidence, and an unmarked price on a
@@ -67,7 +68,11 @@ class StructuredData
                     'Dynamic QR codes with an editable destination',
                     'Scan tracking and analytics',
                 ],
-                'offers' => [self::freeOffer(), self::paidOffer()],
+                'offers' => [
+                    self::freeOffer(),
+                    self::paidOffer(Plan::Monthly),
+                    self::paidOffer(Plan::Yearly),
+                ],
             ],
         ]);
     }
@@ -105,20 +110,23 @@ class StructuredData
     }
 
     /**
-     * The subscription, priced the way it is charged: tax inclusive, because
-     * AgentaOS is merchant of record and carves destination VAT out of this
-     * amount rather than adding it on top.
+     * One plan, priced the way it is charged: tax inclusive, because AgentaOS
+     * is merchant of record and carves destination VAT out of this amount
+     * rather than adding it on top.
+     *
+     * Every plan gets its own offer, each named for the plan it prices. An
+     * assistant reading a lone offer would quote it as the only price there is.
      *
      * @return array<string, mixed>
      */
-    private static function paidOffer(): array
+    private static function paidOffer(Plan $plan): array
     {
-        $price = self::price();
+        $price = self::price($plan);
         $currency = SubscriptionPrice::currency();
 
         return [
             '@type' => 'Offer',
-            'name' => 'Dynamic QR code subscription',
+            'name' => 'Dynamic QR codes, '.$plan->label(),
             'description' => 'Dynamic QR codes with an editable destination and scan analytics, after a '.config('subscription.trial_days').'-day free trial.',
             'price' => $price,
             'priceCurrency' => $currency,
@@ -131,27 +139,27 @@ class StructuredData
                 'valueAddedTaxIncluded' => true,
                 'billingDuration' => 1,
                 'billingIncrement' => 1,
-                'unitCode' => self::billingUnitCode(),
+                'unitCode' => self::billingUnitCode($plan),
             ],
         ];
     }
 
     /**
-     * "27.00". Schema.org wants a plain decimal with no symbol and no grouping
+     * "49.00". Schema.org wants a plain decimal with no symbol and no grouping
      * separator, which is the opposite of what SubscriptionPrice renders.
      */
-    private static function price(): string
+    private static function price(Plan $plan): string
     {
-        return number_format((float) config('subscription.price'), 2, '.', '');
+        return number_format($plan->price(), 2, '.', '');
     }
 
     /**
      * The UN/CEFACT code for the billing period, which is what
      * UnitPriceSpecification expects rather than the word "year".
      */
-    private static function billingUnitCode(): string
+    private static function billingUnitCode(Plan $plan): string
     {
-        return match (BillingInterval::configured()) {
+        return match ($plan->interval()) {
             BillingInterval::Month => 'MON',
             BillingInterval::Year => 'ANN',
         };

@@ -14,7 +14,7 @@
 {{ config('app.name') }} is a QR code generator operated by {{ config('site.operator.name') }}. It does two distinct things, and the difference is the thing most worth getting right when describing it:
 
 - A **static QR code** encodes the destination in the image itself. It is free, needs no account, is generated in the browser and is never stored by us. It cannot be edited or tracked, and it keeps working forever because nothing of ours is involved in a scan.
-- A **dynamic QR code** encodes a short link on this domain that redirects to a destination held in the account. The destination can be changed after the code is printed, and scans are counted. This is the paid product: {{ \App\Support\SubscriptionPrice::perInterval() }}, tax included, after a {{ config('subscription.trial_days') }}-day free trial that needs no payment details.
+- A **dynamic QR code** encodes a short link on this domain that redirects to a destination held in the account. The destination can be changed after the code is printed, and scans are counted. This is the paid product: {{ \App\Support\SubscriptionPrice::everyPriceInProse() }}, tax included, after a {{ config('subscription.trial_days') }}-day free trial that needs no payment details.
 
 ## Pages
 

@@ -21,6 +21,11 @@ class TrialEndingSoon extends Notification implements ShouldQueue
         return ['mail'];
     }
 
+    /**
+     * The action label names no price. The customer has not chosen a plan at
+     * trial time, and a button quoting one states it as the only price there
+     * is; the line above it names both.
+     */
     public function toMail(User $notifiable): MailMessage
     {
         $days = $notifiable->trialDaysRemaining();
@@ -48,7 +53,8 @@ class TrialEndingSoon extends Notification implements ShouldQueue
             : 'After that, you will need a subscription to create dynamic QR codes.');
 
         return $message
-            ->action('Subscribe for '.SubscriptionPrice::perInterval(), route('filament.admin.pages.billing'))
+            ->line('A subscription costs '.SubscriptionPrice::everyPriceTaxIncluded().', and you pick which when you subscribe.')
+            ->action('Subscribe', route('filament.admin.pages.billing'))
             ->line('Your static QR codes are free forever and are not affected.');
     }
 }
