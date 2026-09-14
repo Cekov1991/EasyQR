@@ -36,12 +36,16 @@ _Avoid_: user (ambiguous: a Scanner cannot pay the Owner's Subscription)
 The 7-day free period that begins when a User registers, during which their Dynamic QR Codes resolve normally. Account-level and card-free — MaystQR grants it, the payment provider knows nothing about it.
 _Avoid_: free plan, freemium (the Trial ends; static codes stay free independently)
 
+**Plan**:
+What a User buys: a billing interval and a price under one name. Two exist, **Monthly** and **Yearly**. A Plan owns its interval by construction — a Plan named monthly cannot bill yearly — while its price and its Payment Link are configuration. Yearly is the default and the recommended Plan wherever both prices are shown, always with its saving against twelve monthly charges stated beside them. The homepage teaser is the exception: it quotes the cheapest Plan with a "from" and leaves the comparison to the pricing page. There is no switching between Plans, only cancelling one and buying the other.
+_Avoid_: tier, package (both plans carry the same Quota), billing interval (that is one property of a Plan, not the Plan)
+
 **Subscription**:
-A User's yearly paid commitment that keeps their Dynamic QR Codes resolving, created at AgentaOS when the User pays the subscription Payment Link.
-_Avoid_: plan, membership, package
+A User's paid commitment to one Plan that keeps their Dynamic QR Codes resolving, created at AgentaOS when the User pays that Plan's Payment Link. The Subscription records which Plan bought it, and the period it grants is that Plan's interval.
+_Avoid_: membership, package; "plan" as a synonym for the Subscription itself (a Subscription is *to* a Plan)
 
 **Payment Link**:
-The reusable AgentaOS product (`type: subscription`, `billingInterval: year`) that a User pays to start a Subscription. One link exists for the whole product, not one per User.
+The reusable AgentaOS product (`type: subscription`, with the amount and `billingInterval` fixed on it at creation) that a User pays to start a Subscription. One link exists per Plan, not one per User. Because the charged amount lives on the link, changing a Plan's price means recreating its link.
 _Avoid_: checkout URL (that is what a Checkout produces)
 
 **Checkout**:
@@ -71,9 +75,10 @@ _Avoid_: expired (that word belonged to the retired per-code model), suspended, 
 ## Relationships
 
 - A **User** has at most one **Subscription** and exactly one **Trial**
+- A **Subscription** is to exactly one **Plan**, and the **Plan** fixes its billing interval
 - A **User** owns many **QR Codes**, each either **Static** or **Dynamic**, bounded by their **Quota**
 - A **Dynamic QR Code** has many **Scans**; a **Static QR Code** has none
-- A **Checkout** belongs to one **User** and is created from the single product-wide **Payment Link**
+- A **Checkout** belongs to one **User** and is created from one **Plan**'s **Payment Link**
 - An **Entitlement** belongs to a **User**, never to a **QR Code**
 
 ## Example dialogue
@@ -88,5 +93,6 @@ _Avoid_: expired (that word belonged to the retired per-code model), suspended, 
 ## Flagged ambiguities
 
 - "expires" was overloaded — the `qr_codes.expires_at` column implemented a **per-code** 7-day trial extendable by buying a `QrCodePackage`. Resolved: expiry is now **account-level** only; a Dynamic QR Code's scannability follows its **Owner**'s **Entitlement**, and the per-code package product is retired.
-- "subscription" was used for the abandoned PayPal scaffolding (`App\Models\Subscription`, `PayPalService::createSubscription()`, which actually created a one-time order). Resolved: **Subscription** means the AgentaOS yearly recurring commitment; the PayPal code is deleted.
+- "subscription" was used for the abandoned PayPal scaffolding (`App\Models\Subscription`, `PayPalService::createSubscription()`, which actually created a one-time order). Resolved: **Subscription** means the AgentaOS recurring commitment to a **Plan**; the PayPal code is deleted.
+- "yearly" was baked into the definition of **Subscription** and **Payment Link** while only one plan existed, and the billing interval was a global config value. Resolved: the interval is a property of the **Plan** (see ADR-0003), and both terms are now stated per Plan.
 - "user" was used for both the account holder and the person scanning. Resolved: **Owner** holds the account and pays; **Scanner** holds the phone and pays nothing.

@@ -104,6 +104,31 @@ class WebhookTest extends TestCase
         ], $overrides)];
     }
 
+    /**
+     * Drives the real path a buyer takes: the checkout this app opens is the
+     * row the webhook later completes, and the Plan travels on that row.
+     */
+    private function openCheckout(User $user, string $plan, string $sessionId = 'sess_abc'): void
+    {
+        config()->set('services.agentaos.key', 'sk_test_key');
+        config()->set('services.agentaos.payment_links.monthly', 'link_monthly');
+        config()->set('services.agentaos.payment_links.yearly', 'link_yearly');
+
+        Http::fake([
+            '*/gateway/sessions' => Http::response([
+                'session_id' => $sessionId,
+                'currency' => 'USD',
+                'checkoutUrl' => 'https://app.agentaos.ai/pay/'.$sessionId,
+            ], 201),
+        ]);
+
+        $this->actingAs($user)
+            ->post('/billing/subscribe', ['plan' => $plan])
+            ->assertRedirect('https://app.agentaos.ai/pay/'.$sessionId);
+
+        auth()->logout();
+    }
+
     private function postWebhook(string $payload, ?string $signature): TestResponse
     {
         return $this->call(
@@ -237,16 +262,54 @@ class WebhookTest extends TestCase
     }
 
     /**
-     * The interval is declared once, in config. The grant job used to hardcode
-     * `addYear()` beside it, so changing the config would have billed one period
-     * and granted another — silently, and in the customer's favour.
+     * The regression test for the defect the plan work exists to fix. The
+     * interval is a property of the plan the buyer chose, not of config: the
+     * grant job used to grant one period of the default plan, so a monthly
+     * buyer was handed a year that nothing could later shorten, because the
+     * entitlement date only moves forward (ADR-0002).
      *
      * No remote subscription matches here, so the resolve job cannot overwrite
      * the provisional clock and it is the provisional clock being asserted.
      */
-    public function test_the_provisional_grant_follows_the_configured_interval(): void
+    public function test_a_monthly_buyer_is_granted_a_month_not_a_year(): void
     {
-        config()->set('subscription.billing_interval', 'month');
+        config()->set('subscription.default_plan', 'yearly');
+        config()->set('subscription.grace_days', 7);
+
+        $user = User::factory()->create();
+        $this->openCheckout($user, 'monthly');
+
+        [$payload, $signature] = $this->sign($this->completionEvent($user->id));
+        $this->postWebhook($payload, $signature)->assertNoContent();
+
+        $this->assertTrue(
+            $user->fresh()->entitled_until->isSameDay(now()->addMonth()->addDays(7)),
+            'A monthly plan must not grant a year of entitlement.',
+        );
+    }
+
+    public function test_a_yearly_buyer_is_granted_a_year(): void
+    {
+        config()->set('subscription.default_plan', 'monthly');
+        config()->set('subscription.grace_days', 7);
+
+        $user = User::factory()->create();
+        $this->openCheckout($user, 'yearly');
+
+        [$payload, $signature] = $this->sign($this->completionEvent($user->id));
+        $this->postWebhook($payload, $signature)->assertNoContent();
+
+        $this->assertTrue($user->fresh()->entitled_until->isSameDay(now()->addYear()->addDays(7)));
+    }
+
+    /**
+     * A checkout this app never opened — a link shared by hand, say — has no
+     * row to read a plan from. Access is still granted, on the default plan,
+     * because the money was taken.
+     */
+    public function test_a_paid_checkout_with_no_local_row_grants_on_the_default_plan(): void
+    {
+        config()->set('subscription.default_plan', 'monthly');
         config()->set('subscription.grace_days', 7);
 
         $user = User::factory()->create();
@@ -254,10 +317,8 @@ class WebhookTest extends TestCase
         [$payload, $signature] = $this->sign($this->completionEvent($user->id));
         $this->postWebhook($payload, $signature)->assertNoContent();
 
-        $this->assertTrue(
-            $user->fresh()->entitled_until->isSameDay(now()->addMonth()->addDays(7)),
-            'A monthly interval must not grant a year of entitlement.',
-        );
+        $this->assertTrue($user->fresh()->entitled_until->isSameDay(now()->addMonth()->addDays(7)));
+        $this->assertNull(Subscription::firstWhere('checkout_session_id', 'sess_abc')->plan);
     }
 
     public function test_a_redelivered_event_grants_entitlement_only_once(): void

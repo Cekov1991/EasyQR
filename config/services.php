@@ -38,7 +38,10 @@ return [
     'agentaos' => [
         'key' => env('AGENTAOS_API_KEY'),
         'webhook_secret' => env('AGENTAOS_WEBHOOK_SECRET'),
-        'payment_link_id' => env('AGENTAOS_PAYMENT_LINK_ID'),
+        'payment_links' => [
+            'monthly' => env('AGENTAOS_MONTHLY_PAYMENT_LINK_ID'),
+            'yearly' => env('AGENTAOS_YEARLY_PAYMENT_LINK_ID'),
+        ],
         'base_url' => env('AGENTAOS_BASE_URL', 'https://api.agentaos.ai/api/v1'),
     ],
 

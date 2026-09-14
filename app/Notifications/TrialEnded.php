@@ -25,6 +25,12 @@ class TrialEnded extends Notification implements ShouldQueue
         return ['mail'];
     }
 
+    /**
+     * The action label names no price, for the same reason as TrialEndingSoon:
+     * a button quoting one plan states it as the only price there is, so the
+     * line above it names both. That line says nothing about choosing, because
+     * this email also reaches a lapsed subscriber who chose a plan already.
+     */
     public function toMail(User $notifiable): MailMessage
     {
         $everSubscribed = $notifiable->subscriptions()->whereNotNull('agentaos_subscription_id')->exists();
@@ -57,7 +63,8 @@ class TrialEnded extends Notification implements ShouldQueue
         }
 
         return $message
-            ->action('Reactivate for '.SubscriptionPrice::perInterval(), route('filament.admin.pages.billing'))
+            ->line('A subscription costs '.SubscriptionPrice::everyPriceTaxIncluded().'.')
+            ->action('Reactivate', route('filament.admin.pages.billing'))
             ->line('Everything is exactly where you left it, and your static QR codes are unaffected.');
     }
 

@@ -307,12 +307,23 @@ input::placeholder {
     gap: 8px;
 }
 
+/*
+ * The secondary price, sitting under the headline one on a card that quotes
+ * both. Same row treatment at a smaller size, so the pair reads as one price
+ * block with an obvious primary rather than as two competing offers.
+ */
+.eq-price--alt {
+    font-size: 22px;
+    margin-bottom: 10px;
+}
+
 .eq-price-period {
     font-family: var(--eq-font-body);
     font-weight: 500;
     font-size: 14px;
     color: var(--eq-muted);
 }
+
 
 .eq-price-note {
     font-size: 13.5px;
@@ -949,6 +960,10 @@ textarea.eq-input {
 
     .eq-price {
         font-size: 28px;
+    }
+
+    .eq-price--alt {
+        font-size: 20px;
     }
 
     .eq-scan-title {

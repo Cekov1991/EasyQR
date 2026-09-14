@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Plan;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,6 +29,7 @@ class Subscription extends Model
     protected function casts(): array
     {
         return [
+            'plan' => Plan::class,
             'current_period_end' => 'datetime',
             'cancel_at_period_end' => 'boolean',
             'unit_amount_minor' => 'integer',
@@ -38,6 +40,18 @@ class Subscription extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * The Plan this row was bought under, or the default for a row that never
+     * recorded one — a webhook for a checkout this app did not open, say.
+     *
+     * Named this way on purpose: a `plan()` method beside the `plan` attribute
+     * would be read by Eloquent as a relationship.
+     */
+    public function planOrDefault(): Plan
+    {
+        return $this->plan ?? Plan::default();
     }
 
     public function isLive(): bool

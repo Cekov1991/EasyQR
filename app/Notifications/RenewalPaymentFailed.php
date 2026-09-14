@@ -32,7 +32,7 @@ class RenewalPaymentFailed extends Notification implements ShouldQueue
         $message = (new MailMessage)
             ->subject('We could not renew your '.config('app.name').' subscription')
             ->greeting("Hi {$notifiable->name},")
-            ->line('Your yearly renewal payment did not go through, usually an expired or replaced card.')
+            ->line('Your renewal payment did not go through, usually an expired or replaced card.')
             ->line('Your QR codes are still working. We will keep retrying for a few days.');
 
         if ($notifiable->entitled_until !== null) {

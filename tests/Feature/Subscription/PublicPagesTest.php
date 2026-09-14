@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Subscription;
 
+use App\Enums\Plan;
+use App\Support\SubscriptionPrice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -23,7 +25,7 @@ class PublicPagesTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('7-day');
-        $response->assertSee('$27');
+        $response->assertSee('$49');
         $response->assertDontSee('[Currency]');
         $response->assertDontSee('Paid extensions');
     }
@@ -74,14 +76,30 @@ class PublicPagesTest extends TestCase
             ->assertSee('Pricing');
     }
 
-    public function test_the_pricing_page_states_the_price_period_and_tax_treatment(): void
+    public function test_the_pricing_page_states_both_prices_their_periods_and_the_tax_treatment(): void
     {
         $this->get('/pricing')
             ->assertOk()
-            ->assertSee('$27')
+            ->assertSee('$49')
             ->assertSee('per year')
+            ->assertSee('$5.90')
+            ->assertSee('per month')
             ->assertSee('Tax is included')
             ->assertSee('merchant of record');
+    }
+
+    /**
+     * The two prices never sit together without the saving stated, and a
+     * visitor must learn before paying that either one keeps charging until
+     * they cancel. Both are what the AgentaOS review reads the page for.
+     */
+    public function test_the_pricing_page_states_the_yearly_saving_and_that_both_plans_renew(): void
+    {
+        $this->get('/pricing')
+            ->assertOk()
+            ->assertSee('Save '.SubscriptionPrice::saving(Plan::Yearly))
+            ->assertSee('a year, saving '.SubscriptionPrice::saving(Plan::Yearly))
+            ->assertSee('renews automatically until you cancel it');
     }
 
     public function test_the_pricing_page_states_the_trial_needs_no_payment_details(): void
@@ -101,22 +119,36 @@ class PublicPagesTest extends TestCase
             ->assertSee('refund-policy', false);
     }
 
-    public function test_the_homepage_shows_the_dynamic_price_without_logging_in(): void
+    /**
+     * The teaser names one figure with a "from" and sends the visitor to the
+     * pricing page for the comparison. Two prices on a homepage card buy
+     * confusion for no conversion.
+     */
+    public function test_the_homepage_teaser_shows_the_cheapest_price_with_a_from(): void
     {
+        $cheapest = SubscriptionPrice::cheapest();
+
+        $this->assertSame(Plan::Monthly, $cheapest, 'Monthly is the cheapest charge, so it is the "from" price.');
+
         $this->get('/')
             ->assertOk()
-            ->assertSee('$27')
-            ->assertSee('per year');
+            ->assertSee('>from</span>'.SubscriptionPrice::formatted($cheapest), false)
+            ->assertSee('per '.$cheapest->interval()->value);
     }
 
-    public function test_the_pricing_page_follows_the_configured_price(): void
+    public function test_the_pricing_page_follows_the_configured_prices(): void
     {
-        config(['subscription.price' => 42]);
+        config([
+            'subscription.plans.yearly.price' => 42,
+            'subscription.plans.monthly.price' => 4.50,
+        ]);
 
         $this->get('/pricing')
             ->assertOk()
             ->assertSee('$42')
-            ->assertDontSee('$27');
+            ->assertSee('$4.50')
+            ->assertDontSee('$49')
+            ->assertDontSee('$5.90');
     }
 
     #[DataProvider('publicPageProvider')]
@@ -582,5 +614,78 @@ class PublicPagesTest extends TestCase
             ->assertDontSee('extension package')
             ->assertDontSee('7-day validity')
             ->assertSee('Static QR codes');
+    }
+
+    public function test_the_terms_name_both_prices_and_describe_renewal_per_billing_period(): void
+    {
+        $this->get('/terms-and-conditions')
+            ->assertOk()
+            ->assertSee(SubscriptionPrice::formatted(Plan::Monthly))
+            ->assertSee(SubscriptionPrice::formatted(Plan::Yearly))
+            ->assertSee('at the end of each billing period')
+            ->assertDontSee('renews automatically each year');
+    }
+
+    /**
+     * The 14-day window is scoped to a first payment on a plan, and the reason
+     * is arithmetic: carried over to a monthly plan, a window covering every
+     * renewal would make roughly half of every month refundable, so a monthly
+     * subscription would be refundable essentially all the time.
+     */
+    public function test_the_refund_window_covers_a_first_payment_on_a_plan_not_every_renewal(): void
+    {
+        $this->get('/refund-policy')
+            ->assertOk()
+            ->assertSee('14 days')
+            ->assertSee('first payment')
+            ->assertDontSee('to each yearly renewal');
+    }
+
+    /**
+     * A statutory right is not ours to reword, so it is pinned verbatim.
+     */
+    public function test_the_refund_policy_keeps_the_statutory_withdrawal_sentence(): void
+    {
+        $this->get('/refund-policy')
+            ->assertOk()
+            ->assertSee('If you are a consumer in the EU or UK, this reflects your statutory right of');
+    }
+
+    public function test_the_refund_policy_does_not_assume_a_yearly_period_after_the_window(): void
+    {
+        $this->get('/refund-policy')
+            ->assertOk()
+            ->assertSee('the remainder of the period')
+            ->assertDontSee('the remainder of a yearly period')
+            ->assertSee('refund a fair');
+    }
+
+    /**
+     * The pricing page and the refund policy must not contradict each other on
+     * what the window covers, because the pricing page is the one a buyer
+     * reads before paying.
+     */
+    public function test_the_pricing_pages_refund_sentence_matches_the_refund_policy(): void
+    {
+        $this->get('/pricing')
+            ->assertOk()
+            ->assertSee('on your first payment');
+    }
+
+    /**
+     * Clause 10 of the Terms promises that changes are posted "with a new
+     * 'Last updated' date". Narrowing the refund window while both documents
+     * still carry their old date breaks that promise on the same page that
+     * makes it, and it is the first thing a merchant-of-record reviewer checks.
+     */
+    public function test_the_documents_changed_by_the_two_plan_work_carry_a_current_date(): void
+    {
+        foreach (['/terms-and-conditions', '/refund-policy'] as $path) {
+            $this->get($path)
+                ->assertOk()
+                ->assertSee('Last updated 11 September 2026')
+                ->assertDontSee('Last updated 13 August 2026')
+                ->assertDontSee('Last updated 14 August 2026');
+        }
     }
 }

@@ -2,11 +2,14 @@
 
 namespace Tests\Feature\Subscription;
 
+use App\Enums\Plan;
+use App\Models\Subscription;
 use App\Models\User;
 use App\Notifications\BillingAlert;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
+use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -20,8 +23,24 @@ class CheckoutTest extends TestCase
         parent::setUp();
 
         config()->set('services.agentaos.key', 'sk_test_key');
-        config()->set('services.agentaos.payment_link_id', 'link_uuid_123');
+        config()->set('services.agentaos.payment_links.monthly', 'link_monthly_456');
+        config()->set('services.agentaos.payment_links.yearly', 'link_uuid_123');
         Http::preventStrayRequests();
+    }
+
+    /**
+     * Asserts the alert email that went out names the plan, in its subject or
+     * any of its lines, so the operator can tell which plan stopped selling.
+     */
+    private function assertAlertMentions(string $needle): void
+    {
+        Notification::assertSentOnDemand(
+            BillingAlert::class,
+            fn (BillingAlert $notification, array $channels, AnonymousNotifiable $notifiable): bool => str_contains(
+                json_encode($notification->toMail($notifiable)->toArray()),
+                $needle,
+            ),
+        );
     }
 
     private function fakeCheckoutCreation(): void
@@ -36,13 +55,31 @@ class CheckoutTest extends TestCase
         ]);
     }
 
+    public function test_a_checkout_that_names_no_plan_is_refused_rather_than_given_one(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson('/billing/subscribe')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrorFor('plan');
+
+        $this->actingAs($user)
+            ->postJson('/billing/subscribe', ['plan' => 'weekly'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrorFor('plan');
+
+        Http::assertNothingSent();
+        $this->assertDatabaseCount('subscriptions', 0);
+    }
+
     public function test_subscribing_redirects_to_the_hosted_checkout(): void
     {
         $this->fakeCheckoutCreation();
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->post('/billing/subscribe')
+            ->post('/billing/subscribe', ['plan' => 'yearly'])
             ->assertRedirect('https://app.agentaos.ai/pay/sess_xyz');
     }
 
@@ -51,7 +88,7 @@ class CheckoutTest extends TestCase
         $this->fakeCheckoutCreation();
         $user = User::factory()->create();
 
-        $this->actingAs($user)->post('/billing/subscribe');
+        $this->actingAs($user)->post('/billing/subscribe', ['plan' => 'yearly']);
 
         Http::assertSent(function (Request $request) use ($user): bool {
             $body = $request->data();
@@ -64,13 +101,27 @@ class CheckoutTest extends TestCase
         });
     }
 
+    public function test_a_monthly_checkout_opens_against_the_monthly_link_and_records_the_plan(): void
+    {
+        $this->fakeCheckoutCreation();
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post('/billing/subscribe', ['plan' => 'monthly'])
+            ->assertRedirect('https://app.agentaos.ai/pay/sess_xyz');
+
+        Http::assertSent(fn (Request $request): bool => $request['linkId'] === 'link_monthly_456');
+
+        $this->assertSame(Plan::Monthly, Subscription::firstWhere('checkout_session_id', 'sess_xyz')->plan);
+    }
+
     public function test_the_return_urls_come_from_the_app_url_not_the_request_host(): void
     {
         $this->fakeCheckoutCreation();
         config()->set('app.url', 'https://easyqr.example/');
         $user = User::factory()->create();
 
-        $this->actingAs($user)->post('/billing/subscribe');
+        $this->actingAs($user)->post('/billing/subscribe', ['plan' => 'yearly']);
 
         Http::assertSent(function (Request $request): bool {
             $body = $request->data();
@@ -85,17 +136,20 @@ class CheckoutTest extends TestCase
         $this->fakeCheckoutCreation();
         $user = User::factory()->create();
 
-        $this->actingAs($user)->post('/billing/subscribe');
+        $this->actingAs($user)->post('/billing/subscribe', ['plan' => 'yearly']);
 
         $this->assertDatabaseHas('subscriptions', [
             'user_id' => $user->id,
             'checkout_session_id' => 'sess_xyz',
+            'plan' => 'yearly',
             'status' => 'incomplete',
         ]);
     }
 
     public function test_paying_does_not_happen_and_nothing_is_recorded_when_the_api_fails(): void
     {
+        Notification::fake();
+        config()->set('subscription.alert_email', 'ops@easyqr.test');
         Http::fake([
             '*/gateway/sessions' => Http::response(
                 ['statusCode' => 400, 'message' => 'amount is required'],
@@ -106,12 +160,13 @@ class CheckoutTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->post('/billing/subscribe')
+            ->post('/billing/subscribe', ['plan' => 'monthly'])
             ->assertRedirect()
             ->assertSessionHas('error');
 
         $this->assertDatabaseCount('subscriptions', 0);
         $this->assertTrue($user->fresh()->isTrialing());
+        $this->assertAlertMentions('monthly');
 
         // A rejected request will be rejected again. Since no call carries an
         // idempotency key, a pointless retry is also a duplicate-object risk.
@@ -131,7 +186,7 @@ class CheckoutTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->post('/billing/subscribe')
+            ->post('/billing/subscribe', ['plan' => 'yearly'])
             ->assertRedirect('https://app.agentaos.ai/pay/sess_xyz');
 
         Http::assertSentCount(2);
@@ -151,7 +206,7 @@ class CheckoutTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->post('/billing/subscribe')
+            ->post('/billing/subscribe', ['plan' => 'yearly'])
             ->assertRedirect('https://app.agentaos.ai/pay/sess_xyz');
 
         Http::assertSentCount(2);
@@ -169,7 +224,7 @@ class CheckoutTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->post('/billing/subscribe')
+            ->post('/billing/subscribe', ['plan' => 'yearly'])
             ->assertRedirect()
             ->assertSessionHas('error');
 
@@ -177,23 +232,42 @@ class CheckoutTest extends TestCase
         Notification::assertSentOnDemand(BillingAlert::class);
     }
 
-    public function test_checkout_is_refused_when_no_payment_link_is_configured(): void
+    /**
+     * "Nobody can subscribe monthly" is a different incident from "nobody can
+     * subscribe", so the alert has to say which link is missing.
+     */
+    public function test_checkout_is_refused_when_that_plans_payment_link_is_not_configured(): void
     {
-        config()->set('services.agentaos.payment_link_id', null);
+        Notification::fake();
+        config()->set('subscription.alert_email', 'ops@easyqr.test');
+        config()->set('services.agentaos.payment_links.monthly', null);
 
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->post('/billing/subscribe')
+            ->post('/billing/subscribe', ['plan' => 'monthly'])
             ->assertRedirect()
             ->assertSessionHas('error');
 
         Http::assertNothingSent();
+        $this->assertAlertMentions('AGENTAOS_MONTHLY_PAYMENT_LINK_ID');
+    }
+
+    public function test_the_other_plan_still_sells_when_one_link_is_missing(): void
+    {
+        $this->fakeCheckoutCreation();
+        config()->set('services.agentaos.payment_links.monthly', null);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post('/billing/subscribe', ['plan' => 'yearly'])
+            ->assertRedirect('https://app.agentaos.ai/pay/sess_xyz');
     }
 
     public function test_a_guest_cannot_start_a_checkout(): void
     {
-        $this->post('/billing/subscribe')->assertRedirect('/login');
+        $this->post('/billing/subscribe', ['plan' => 'yearly'])->assertRedirect('/login');
 
         Http::assertNothingSent();
     }

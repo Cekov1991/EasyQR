@@ -29,19 +29,29 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Price
+    | Plans
     |--------------------------------------------------------------------------
     |
-    | AgentaOS is Merchant of Record and prices are tax inclusive: the buyer is
-    | charged this amount in total and destination VAT is carved out of it.
+    | One entry per App\Enums\Plan case. AgentaOS is Merchant of Record and
+    | prices are tax inclusive: the buyer is charged this amount in total and
+    | destination VAT is carved out of it.
+    |
+    | The price a buyer is actually charged lives on the AgentaOS payment link,
+    | fixed when the link is created. Changing a price here changes what the
+    | site displays; the link must be recreated to change what is charged.
+    |
+    | The billing interval is not configurable: it is a property of the plan.
     |
     */
 
-    'price' => (float) env('SUBSCRIPTION_PRICE', 27),
+    'default_plan' => env('SUBSCRIPTION_DEFAULT_PLAN', 'yearly'),
+
+    'plans' => [
+        'monthly' => ['price' => (float) env('SUBSCRIPTION_MONTHLY_PRICE', 5.90)],
+        'yearly' => ['price' => (float) env('SUBSCRIPTION_YEARLY_PRICE', 49)],
+    ],
 
     'currency' => env('SUBSCRIPTION_CURRENCY', 'USD'),
-
-    'billing_interval' => 'year',
 
     /*
     |--------------------------------------------------------------------------
