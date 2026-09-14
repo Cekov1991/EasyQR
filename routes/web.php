@@ -104,6 +104,14 @@ Route::post('report', [AbuseReportController::class, 'store'])
     ->middleware('throttle:5,60')
     ->name('report.store');
 
+/*
+ * The questions people ask before they print. Public and crawlable for the same
+ * reason the pricing page is: these are the queries that bring someone here in
+ * the first place, and the answers carry FAQPage markup so they can be quoted
+ * rather than paraphrased.
+ */
+Route::view('faq', 'faq')->name('faq');
+
 Route::view('terms-and-conditions', 'terms-and-conditions');
 
 Route::view('privacy-policy', 'privacy-policy');

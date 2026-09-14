@@ -136,7 +136,8 @@
         </p>
 
         <p class="eq-prose-updated">
-            Full terms in our <a href="{{ url('/terms-and-conditions') }}">Terms and Conditions</a>.
+            More answers in our <a href="{{ route('faq') }}">FAQ</a>, and the full terms in our
+            <a href="{{ url('/terms-and-conditions') }}">Terms and Conditions</a>.
         </p>
 
     </div>

@@ -235,7 +235,7 @@ class AbuseReportTest extends TestCase
      */
     public function test_every_public_page_links_to_the_report_form(): void
     {
-        foreach (['/', '/pricing', '/terms-and-conditions', '/privacy-policy', '/refund-policy'] as $path) {
+        foreach (['/', '/pricing', '/faq', '/terms-and-conditions', '/privacy-policy', '/refund-policy'] as $path) {
             $this->get($path)
                 ->assertOk()
                 ->assertSee(route('report.create'), false);

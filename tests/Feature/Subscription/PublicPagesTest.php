@@ -290,6 +290,7 @@ class PublicPagesTest extends TestCase
         return [
             'homepage' => ['/'],
             'pricing' => ['/pricing'],
+            'faq' => ['/faq'],
             'terms' => ['/terms-and-conditions'],
             'privacy' => ['/privacy-policy'],
             'refunds' => ['/refund-policy'],
@@ -317,6 +318,12 @@ class PublicPagesTest extends TestCase
      * The footer used to point at #about, #features and #faq, which existed on
      * the old marketing page. The homepage that replaced it has no such
      * sections, so every one of those links went nowhere.
+     *
+     * The bare fragments were asserted against until the FAQ page existed, at
+     * which point "#faq" became a legitimate string: the FAQPage markup
+     * identifies itself at /faq#faq. What was always meant is a link to an
+     * anchor that is not there, so that is what is asserted — narrower, and
+     * still fails on the thing that went wrong.
      */
     #[DataProvider('publicPageProvider')]
     public function test_a_public_page_has_no_links_to_the_retired_marketing_anchors(string $path): void
@@ -324,9 +331,9 @@ class PublicPagesTest extends TestCase
         $response = $this->get($path);
 
         $response->assertOk();
-        $response->assertDontSee('#about', false);
-        $response->assertDontSee('#features', false);
-        $response->assertDontSee('#faq', false);
+        $response->assertDontSee('href="#about"', false);
+        $response->assertDontSee('href="#features"', false);
+        $response->assertDontSee('href="#faq"', false);
     }
 
     /**

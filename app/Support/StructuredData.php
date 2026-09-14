@@ -78,6 +78,67 @@ class StructuredData
     }
 
     /**
+     * The questions and answers on the FAQ page, in the vocabulary a search
+     * engine and an assistant read.
+     *
+     * This is the markup most worth having on this site. The questions people
+     * type are the questions on that page — whether a printed code can be
+     * edited, what happens when a subscription lapses — and an answer we have
+     * marked up is one that can be quoted back with confidence instead of
+     * paraphrased out of marketing copy.
+     *
+     * Rendered from Faq rather than restated, because a marked-up answer that
+     * disagrees with the prose beside it is worse than no markup at all.
+     */
+    public static function forFaq(): string
+    {
+        $questions = array_map(fn (array $entry): array => [
+            '@type' => 'Question',
+            '@id' => route('faq').'#'.$entry['id'],
+            'name' => $entry['question'],
+            'acceptedAnswer' => [
+                '@type' => 'Answer',
+                'text' => self::plainText($entry['answer']),
+            ],
+        ], Faq::questions());
+
+        return self::encode([
+            [
+                '@type' => 'FAQPage',
+                '@id' => route('faq').'#faq',
+                'url' => route('faq'),
+                'name' => 'Frequently asked questions',
+                'inLanguage' => 'en',
+                'publisher' => ['@id' => url('/#organization')],
+                'mainEntity' => $questions,
+            ],
+        ]);
+    }
+
+    /**
+     * An answer written as HTML, as a machine should read it.
+     *
+     * Paragraph boundaries survive as blank lines, because stripping the tags
+     * alone runs the last word of one paragraph into the first of the next and
+     * produces a sentence nobody wrote. Everything else collapses to single
+     * spaces: the source is wrapped for reading, and a hard newline every
+     * seventy characters would be quoted back at someone as if the line breaks
+     * were meant. Entities are decoded so an answer does not quote "&amp;".
+     */
+    private static function plainText(string $html): string
+    {
+        $marked = preg_replace('/<\/p>\s*<p[^>]*>/i', "\n\n", trim($html));
+        $text = html_entity_decode(strip_tags((string) $marked), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        $paragraphs = array_map(
+            fn (string $paragraph): string => trim((string) preg_replace('/\s+/u', ' ', $paragraph)),
+            preg_split('/\n{2,}/', $text) ?: []
+        );
+
+        return implode("\n\n", array_filter($paragraphs, fn (string $paragraph): bool => $paragraph !== ''));
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private static function organization(): array
