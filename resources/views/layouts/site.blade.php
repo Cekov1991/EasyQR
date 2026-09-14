@@ -97,6 +97,7 @@
             <span>© {{ date('Y') }} {{ config('app.name') }}</span>
             <nav>
                 <a href="{{ route('pricing') }}">Pricing</a>
+                <a href="{{ route('faq') }}">FAQ</a>
                 <a href="{{ url('/terms-and-conditions') }}">Terms &amp; Conditions</a>
                 <a href="{{ url('/privacy-policy') }}">Privacy Policy</a>
                 <a href="{{ url('/refund-policy') }}">Refund Policy</a>

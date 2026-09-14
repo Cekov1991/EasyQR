@@ -37,7 +37,7 @@ class StructuredDataTest extends TestCase
      */
     public function test_only_the_pages_that_sell_it_are_marked_up_as_the_product(): void
     {
-        foreach (['/', '/pricing'] as $path) {
+        foreach (['/', '/pricing', '/faq'] as $path) {
             $this->assertNotNull(
                 $this->node($this->graphFrom($this->get($path)), 'SoftwareApplication'),
                 "The product markup is missing from {$path}."
@@ -108,7 +108,7 @@ class StructuredDataTest extends TestCase
      */
     public function test_the_markup_on_every_public_page_is_parseable(): void
     {
-        foreach (['/', '/pricing', '/report', '/terms-and-conditions', '/privacy-policy', '/refund-policy'] as $path) {
+        foreach (['/', '/pricing', '/faq', '/report', '/terms-and-conditions', '/privacy-policy', '/refund-policy'] as $path) {
             $this->assertNotEmpty($this->graphFrom($this->get($path)), "No parseable JSON-LD on {$path}.");
         }
     }

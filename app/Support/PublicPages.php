@@ -37,6 +37,11 @@ class PublicPages
                 'summary' => 'Static QR codes are free forever. Dynamic QR codes cost '.SubscriptionPrice::everyPriceInProse().', tax included, after a '.config('subscription.trial_days').'-day free trial that needs no payment details.',
             ],
             [
+                'url' => route('faq'),
+                'title' => 'Frequently asked questions',
+                'summary' => 'Whether a printed QR code can be edited, what a static code cannot do, what the subscription costs and what happens to a dynamic code when it lapses.',
+            ],
+            [
                 'url' => route('report.create'),
                 'title' => 'Report a QR code',
                 'summary' => 'Report a QR code on this domain that leads somewhere harmful. Open to anyone, no account needed.',
