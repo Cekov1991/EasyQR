@@ -81,8 +81,9 @@
             free QR codes were generated today, for instance, or how many people opened a checkout. A count
             records that something happened and never who it happened to: it carries no name, no account, no
             IP address, no cookie and nothing you typed, and the address you put into a free QR code is never
-            part of it. These counts cannot be traced back to you, connected to one another, or used to
-            recognise you on a later visit. We keep them for
+            part of it. A count may note which of our own pages it happened on, such as the homepage or one
+            of our guides, but loading a page is never counted by itself. These counts cannot be traced back
+            to you, connected to one another, or used to recognise you on a later visit. We keep them for
             <strong>{{ config('site.event_retention_days') }} days</strong> and use them to understand
             whether the site works, not who is using it.
         </p>

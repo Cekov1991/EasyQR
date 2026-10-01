@@ -7,6 +7,8 @@ use App\Enums\TrackedEvent;
 use App\Models\SiteEvent;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Support\LandingPages;
+use Database\Factories\SiteEventFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
@@ -23,12 +25,13 @@ class FunnelReportTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function recordEvent(TrackedEvent $event, int $times = 1, int $daysAgo = 0): void
+    private function recordEvent(TrackedEvent $event, int $times = 1, int $daysAgo = 0, ?string $page = null): void
     {
         SiteEvent::factory()
             ->count($times)
             ->named($event)
             ->occurredDaysAgo($daysAgo)
+            ->when($page !== null, fn (SiteEventFactory $factory): SiteEventFactory => $factory->onPage($page))
             ->create();
     }
 
@@ -198,5 +201,67 @@ class FunnelReportTest extends TestCase
     public function test_it_explains_that_the_stages_are_not_a_cohort(): void
     {
         $this->assertStringContainsString('identifies', $this->report());
+    }
+
+    /**
+     * The question the Landing Pages raise: which page the generations, the
+     * downloads and the offer clicks came from.
+     */
+    public function test_it_breaks_the_page_events_down_by_page_when_asked(): void
+    {
+        $this->recordEvent(TrackedEvent::StaticQrGenerated, 7, page: LandingPages::HOME);
+        $this->recordEvent(TrackedEvent::StaticQrGenerated, 4, page: LandingPages::HUB);
+        $this->recordEvent(TrackedEvent::OfferClicked, 2, page: LandingPages::HUB);
+
+        $output = $this->report('--by-page');
+
+        $this->assertStringContainsString('By page', $output);
+        $this->assertMatchesRegularExpression('/\|\s*home\s*\|\s*7\s*\|\s*0\s*\|\s*0\s*\|\s*0\s*\|\s*0\s*\|/', $output);
+        $this->assertMatchesRegularExpression('/\|\s*'.LandingPages::HUB.'\s*\|\s*4\s*\|\s*0\s*\|\s*0\s*\|\s*2\s*\|\s*0\s*\|/', $output);
+    }
+
+    /**
+     * Rows written before the label existed are shown as such rather than
+     * credited to the homepage, which is a guess, or dropped, which would stop
+     * the column adding up to the totals above it.
+     */
+    public function test_events_from_before_the_label_existed_are_shown_as_unlabelled(): void
+    {
+        $this->recordEvent(TrackedEvent::StaticQrGenerated, 3);
+
+        $this->assertMatchesRegularExpression('/\(unlabelled\)\s*\|\s*3\s*\|/', $this->report('--by-page'));
+    }
+
+    /**
+     * A page that has collected nothing in the window is noise in the table.
+     * The homepage stays, as the baseline every other row is read against.
+     */
+    public function test_pages_with_nothing_in_the_window_are_left_out(): void
+    {
+        $this->recordEvent(TrackedEvent::StaticQrGenerated, 1, page: LandingPages::HUB);
+
+        $output = $this->report('--by-page');
+
+        $this->assertStringContainsString('home', $output);
+        $this->assertStringNotContainsString('restaurant-menu-qr-code', $output);
+        $this->assertStringNotContainsString('(unlabelled)', $output);
+    }
+
+    public function test_the_page_breakdown_respects_the_window(): void
+    {
+        $this->recordEvent(TrackedEvent::StaticQrGenerated, 5, daysAgo: 60, page: LandingPages::HUB);
+
+        $this->assertStringNotContainsString(LandingPages::HUB, $this->report('--days=7 --by-page'));
+    }
+
+    public function test_the_report_is_unchanged_when_no_page_breakdown_is_asked_for(): void
+    {
+        $this->recordEvent(TrackedEvent::StaticQrGenerated, 4, page: LandingPages::HUB);
+
+        $output = $this->report();
+
+        $this->assertStringNotContainsString('By page', $output);
+        $this->assertStringNotContainsString(LandingPages::HUB, $output);
+        $this->assertMatchesRegularExpression('/Codes generated\s*\|\s*4\s*\|/', $output);
     }
 }

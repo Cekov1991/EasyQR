@@ -140,7 +140,9 @@
              * The page this generator is embedded on: `home`, or a Landing
              * Page slug. Read from the form rather than rendered into the
              * script, because the script is pushed once per page and must not
-             * assume which page that is. Not sent anywhere yet.
+             * assume which page that is. Sent with the generate request and
+             * with every event, and checked server-side against the pages
+             * that exist.
              */
             const page = form.dataset.page;
 
@@ -172,7 +174,7 @@
                             'Accept': 'application/json',
                             'X-CSRF-TOKEN': csrf,
                         },
-                        body: JSON.stringify(Object.assign({ event: event }, extra || {})),
+                        body: JSON.stringify(Object.assign({ event: event, page: page }, extra || {})),
                     }).catch(function () {});
                 } catch (e) {
                     // Counting must never be the reason something else fails.
@@ -368,7 +370,7 @@
                             'Accept': 'application/json',
                             'X-CSRF-TOKEN': csrf,
                         },
-                        body: JSON.stringify({ url: url }),
+                        body: JSON.stringify({ url: url, page: page }),
                     });
 
                     const data = await response.json().catch(() => null);

@@ -6,6 +6,7 @@ use App\Enums\SignupSource;
 use App\Enums\TrackedEvent;
 use App\Models\SiteEvent;
 use App\Models\User;
+use App\Support\LandingPages;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
@@ -37,7 +38,9 @@ use Illuminate\Support\Carbon;
  */
 class FunnelReport extends Command
 {
-    protected $signature = 'funnel:report {--days=30 : How many days back to report on}';
+    protected $signature = 'funnel:report
+        {--days=30 : How many days back to report on}
+        {--by-page : Also break the page events down by the page they happened on}';
 
     protected $description = 'Report the homepage-to-subscription funnel over a recent window';
 
@@ -101,6 +104,10 @@ class FunnelReport extends Command
             ],
         );
 
+        if ($this->option('by-page')) {
+            $this->pageTable($since);
+        }
+
         $this->registrationTable($since);
 
         $this->newLine();
@@ -155,6 +162,54 @@ class FunnelReport extends Command
         $this->newLine();
         $this->line('  <options=bold>Registrations by source</> <fg=gray>— from account rows, exact</>');
         $this->table(['Source', 'Registered', 'Subscribed', 'Conversion'], $rows);
+    }
+
+    /**
+     * The events that carry a `page` label, counted per page.
+     *
+     * Every Landing Page is considered, not only the published ones, because a
+     * page unpublished during the window still collected counts while it was
+     * live. A page with nothing in the window is left out as noise; the
+     * homepage always stays, as the row the others are read against.
+     *
+     * Rows written before the label existed carry none. They are shown as
+     * their own row rather than credited to the homepage, which would be a
+     * guess, or dropped, which would stop the column adding up to the totals.
+     */
+    private function pageTable(Carbon $since): void
+    {
+        $events = [
+            TrackedEvent::StaticQrGenerated,
+            TrackedEvent::QrDownloaded,
+            TrackedEvent::OfferShown,
+            TrackedEvent::OfferClicked,
+            TrackedEvent::OfferDismissed,
+        ];
+
+        $rows = [];
+
+        foreach ([LandingPages::HOME, ...array_keys(LandingPages::all()), null] as $page) {
+            $counts = SiteEvent::query()
+                ->since($since)
+                ->whereIn('name', array_map(fn (TrackedEvent $event): string => $event->value, $events))
+                ->onPage($page)
+                ->selectRaw('name, count(*) as total')
+                ->groupBy('name')
+                ->pluck('total', 'name');
+
+            if ($counts->isEmpty() && $page !== LandingPages::HOME) {
+                continue;
+            }
+
+            $rows[] = [
+                $page ?? '(unlabelled)',
+                ...array_map(fn (TrackedEvent $event): int => (int) ($counts[$event->value] ?? 0), $events),
+            ];
+        }
+
+        $this->newLine();
+        $this->line('  <options=bold>By page</> <fg=gray>— the same anonymous counts, split by where they happened</>');
+        $this->table(['Page', 'Generated', 'Downloaded', 'Offer shown', 'Offer clicked', 'Offer dismissed'], $rows);
     }
 
     private function countEvents(TrackedEvent $event, Carbon $since): int

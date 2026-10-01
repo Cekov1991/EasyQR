@@ -27,6 +27,12 @@ class LandingPages
     public const HUB = 'static-vs-dynamic-qr-code';
 
     /**
+     * The page label for the homepage, which is not a Landing Page but embeds
+     * the same generator.
+     */
+    public const HOME = 'home';
+
+    /**
      * Every Landing Page, keyed by slug, in the order the spec lists them.
      *
      * Titles are written without the site name, which the layout appends, and
@@ -191,6 +197,27 @@ class LandingPages
     public static function published(): array
     {
         return array_filter(self::all(), fn (LandingPage $page): bool => $page->published);
+    }
+
+    /**
+     * The labels a counted event may carry to say which page it happened on:
+     * the homepage, or a page a visitor can reach. A page still in review
+     * cannot collect counts, and nothing outside this list is ever stored.
+     *
+     * @return array<int, string>
+     */
+    public static function pageLabels(): array
+    {
+        return [self::HOME, ...array_keys(self::published())];
+    }
+
+    /**
+     * The label for a request that sent none: the homepage, the only page a
+     * script cached from before the label existed could have come from.
+     */
+    public static function pageLabelOrHome(?string $label): string
+    {
+        return $label ?? self::HOME;
     }
 
     public static function find(string $slug): ?LandingPage
