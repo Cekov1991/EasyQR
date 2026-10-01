@@ -71,6 +71,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Larger quota
+    |--------------------------------------------------------------------------
+    |
+    | The priced answer to "I need more dynamic codes", billed yearly. It is
+    | not a Plan case and has no checkout of its own: the customer emails
+    | support, pays a payment link we send, and we raise users.dynamic_qr_limit
+    | by hand. These values only drive the copy that quotes the offer.
+    |
+    */
+
+    'larger_quota' => [
+        'dynamic' => (int) env('SUBSCRIPTION_LARGER_DYNAMIC_QR_LIMIT', 25),
+        'price' => (float) env('SUBSCRIPTION_LARGER_QUOTA_PRICE', 99),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Alerts
     |--------------------------------------------------------------------------
     |

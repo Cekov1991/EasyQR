@@ -128,6 +128,39 @@ class QrCodeCreationGateTest extends TestCase
         $this->assertStringContainsString('all 3', QrCodeResource::dynamicUnavailableReason());
     }
 
+    public function test_the_full_quota_notice_offers_the_larger_plan(): void
+    {
+        $user = User::factory()->create();
+        QrCode::factory()->count(5)->for($user)->dynamic()->create();
+
+        $this->actingAs($user);
+
+        Livewire::test(CreateQrCode::class)
+            ->fillForm($this->formData('dynamic'))
+            ->call('create')
+            ->assertNotified('QR code limit reached');
+
+        $message = QrCodeResource::dynamicLimitReachedMessage($user);
+
+        $this->assertStringContainsString('all 5', $message);
+        $this->assertStringContainsString('25 dynamic codes for $99 a year', $message);
+        $this->assertStringContainsString(config('site.support_email'), $message);
+    }
+
+    /**
+     * An account already raised to the larger ceiling has nothing left to buy,
+     * and offering it the plan it is on reads as a billing mistake.
+     */
+    public function test_the_full_quota_notice_does_not_offer_the_larger_plan_to_an_account_already_on_it(): void
+    {
+        $user = User::factory()->create(['dynamic_qr_limit' => 25]);
+
+        $message = QrCodeResource::dynamicLimitReachedMessage($user);
+
+        $this->assertStringContainsString('all 25', $message);
+        $this->assertStringNotContainsString('larger plan', $message);
+    }
+
     public function test_the_create_button_disappears_only_when_both_quotas_are_gone(): void
     {
         $user = User::factory()->create([

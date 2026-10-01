@@ -165,6 +165,20 @@ class SubscriptionPrice
     }
 
     /**
+     * "25 dynamic codes for $99 a year" — the larger quota as every page that
+     * offers it words it, so the FAQ, the pricing page and the limit-reached
+     * notice cannot each quote a different number.
+     */
+    public static function largerQuotaOffer(): string
+    {
+        return sprintf(
+            '%d dynamic codes for %s a year',
+            (int) config('subscription.larger_quota.dynamic'),
+            self::render((float) config('subscription.larger_quota.price')),
+        );
+    }
+
+    /**
      * The dollar sign is not decoration: it is correct only while the currency
      * is USD, so any other currency is suffixed with its code rather than being
      * silently mislabelled as dollars.

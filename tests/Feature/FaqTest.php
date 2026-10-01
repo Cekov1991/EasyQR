@@ -55,6 +55,7 @@ class FaqTest extends TestCase
         config([
             'subscription.quotas.dynamic' => 11,
             'subscription.quotas.static' => 97,
+            'subscription.larger_quota.dynamic' => 40,
             'subscription.trial_days' => 21,
             'subscription.grace_days' => 3,
             'site.scan_retention_months' => 5,
@@ -68,6 +69,24 @@ class FaqTest extends TestCase
             ->assertSee('We add 3 days on the end of a', false)
             ->assertSee('5 months', false)
             ->assertDontSee('5 dynamic codes', false);
+    }
+
+    /**
+     * "Ask us" left the buyer with the most reason to pay holding no price.
+     * The answer quotes the larger plan from config, so a change to it cannot
+     * leave the FAQ promising the old offer.
+     */
+    public function test_the_more_codes_answer_prices_the_larger_plan_from_config(): void
+    {
+        config([
+            'subscription.larger_quota.dynamic' => 40,
+            'subscription.larger_quota.price' => 120,
+        ]);
+
+        $this->get('/faq')
+            ->assertOk()
+            ->assertSee('40 dynamic codes for $120 a year', false)
+            ->assertDontSee('25 dynamic codes for $99 a year', false);
     }
 
     public function test_both_prices_are_quoted_as_they_are_charged(): void

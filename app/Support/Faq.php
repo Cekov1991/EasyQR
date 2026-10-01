@@ -334,6 +334,7 @@ class Faq
         $retention = (int) config('site.scan_retention_months');
         $privacyPolicy = url('/privacy-policy');
         $support = config('site.support_email');
+        $largerQuota = SubscriptionPrice::largerQuotaOffer();
 
         return [
             [
@@ -357,9 +358,14 @@ class Faq
                 'question' => "What if I need more than {$dynamic} dynamic codes?",
                 'answer' => <<<HTML
                     <p>
-                        Ask us. The ceiling is set per account and we can raise yours — email
-                        <a href="mailto:{$support}">{$support}</a> with a rough idea of how many you need
-                        and what for.
+                        Move to the larger plan: {$largerQuota}, tax included, in place of the
+                        standard one. It is not a button in
+                        your account yet — email <a href="mailto:{$support}">{$support}</a> from the address
+                        on your account, we send you a payment link, and your limit goes up as soon as it
+                        is paid.
+                    </p>
+                    <p>
+                        Need more than that? Tell us roughly how many and what for, and we will price it.
                     </p>
                     HTML,
             ],

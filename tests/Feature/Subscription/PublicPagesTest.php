@@ -136,6 +136,28 @@ class PublicPagesTest extends TestCase
             ->assertSee('per '.$cheapest->interval()->value);
     }
 
+    public function test_the_pricing_page_offers_the_larger_plan_and_links_to_how_to_get_it(): void
+    {
+        $this->get('/pricing')
+            ->assertOk()
+            ->assertSee('Need more than 5?', false)
+            ->assertSee('25 dynamic codes for $99 a year', false)
+            ->assertSee(route('faq').'#more-codes', false);
+    }
+
+    /**
+     * Free static codes sit one click away, so the page has to say what the
+     * subscription buys over them before it says what it costs.
+     */
+    public function test_the_pricing_page_explains_why_a_dynamic_code_is_worth_paying_for(): void
+    {
+        $this->get('/pricing')
+            ->assertOk()
+            ->assertSee('Why pay for a code when static ones are free?')
+            ->assertSee('a reprint of')
+            ->assertSee('counts every scan');
+    }
+
     public function test_the_pricing_page_follows_the_configured_prices(): void
     {
         config([

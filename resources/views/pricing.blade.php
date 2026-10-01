@@ -74,6 +74,10 @@
                 <li><span class="eq-check eq-check--ink">✓</span>Website, WiFi, contact card, email, WhatsApp, SMS, phone, location, calendar</li>
                 <li><span class="eq-check eq-check--ink">✓</span>Colour and logo styling</li>
             </ul>
+            <p class="eq-card-text">
+                Need more than {{ config('subscription.quotas.dynamic') }}? {{ \App\Support\SubscriptionPrice::largerQuotaOffer() }}
+                — <a href="{{ route('faq') }}#more-codes">how to get it</a>.
+            </p>
             <div class="eq-panel eq-card-foot">
                 @auth
                     <span style="font-size:13.5px" class="eq-muted">Manage your subscription in your dashboard</span>
@@ -89,6 +93,15 @@
     </div>
 
     <div class="eq-prose">
+
+        <h2>Why pay for a code when static ones are free?</h2>
+        <p>
+            Because a static code cannot be changed once it is printed. When the menu, the
+            booking link or the campaign page moves, the only fix is a new code and a reprint of
+            everything the old one is on — and one run of menus, posters or leaflets usually
+            costs more than a year here. A dynamic code takes the new link in a few seconds,
+            and counts every scan while it is out there.
+        </p>
 
         <h2>What you pay</h2>
         <p>

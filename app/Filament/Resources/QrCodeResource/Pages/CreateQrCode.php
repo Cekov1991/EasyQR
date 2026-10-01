@@ -25,19 +25,24 @@ class CreateQrCode extends CreateRecord
             return;
         }
 
-        [$title, $body] = $type === 'dynamic' && $user->isLapsed()
-            ? [
+        [$title, $body] = match (true) {
+            $type === 'dynamic' && $user->isLapsed() => [
                 'Subscription required',
                 'Dynamic QR codes need an active subscription. Your static QR codes are unaffected.',
-            ]
-            : [
+            ],
+            $type === 'dynamic' => [
+                'QR code limit reached',
+                QrCodeResource::dynamicLimitReachedMessage($user),
+            ],
+            default => [
                 'QR code limit reached',
                 sprintf(
                     'You have used all %d of your %s QR codes. Delete one to free a slot.',
                     $user->quota()->limitFor($type),
                     $type,
                 ),
-            ];
+            ],
+        };
 
         Notification::make()
             ->danger()

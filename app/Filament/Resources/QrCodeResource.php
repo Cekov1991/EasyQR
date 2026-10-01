@@ -5,7 +5,9 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\QrCodeResource\Pages;
 use App\Filament\Resources\QrCodeResource\RelationManagers\ScansRelationManager;
 use App\Models\QrCode;
+use App\Models\User;
 use App\Rules\ValidQrUrl;
+use App\Support\SubscriptionPrice;
 use Filament\Forms;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
@@ -495,9 +497,28 @@ class QrCodeResource extends Resource
             return 'Dynamic QR codes need an active subscription. Your static QR codes are unaffected.';
         }
 
+        return self::dynamicLimitReachedMessage($user);
+    }
+
+    /**
+     * The full-quota notice, with the larger plan offered to anyone it would
+     * actually raise. An account already at or above that ceiling has nothing
+     * to buy, so it is told only how to free a slot.
+     */
+    public static function dynamicLimitReachedMessage(User $user): string
+    {
+        $limit = $user->quota()->limitFor('dynamic');
+        $message = sprintf('You have used all %d of your dynamic QR codes. Delete one to free a slot', $limit);
+
+        if ($limit >= (int) config('subscription.larger_quota.dynamic')) {
+            return $message.'.';
+        }
+
         return sprintf(
-            'You have used all %d of your dynamic QR codes. Delete one to free a slot.',
-            $user->quota()->limitFor('dynamic'),
+            '%s, or move to the larger plan: %s. Email %s to get it.',
+            $message,
+            SubscriptionPrice::largerQuotaOffer(),
+            config('site.support_email'),
         );
     }
 }
