@@ -48,7 +48,8 @@
                 Which part of our site sent you to the registration form, if you arrived by following one of
                 our own links — for example the upgrade offer shown after you download a free QR code. This is
                 a single short label chosen from a fixed list we publish, such as
-                <code>static-offer</code>. It records where the link was, never anything about you, and it is
+                <code>static-offer</code>. If that link was on one of our guides, we also note which guide, by
+                the name in its address. It records where the link was, never anything about you, and it is
                 blank for most accounts. We use it only to understand which parts of the site people find
                 useful, and it is deleted with your account.
             </li>

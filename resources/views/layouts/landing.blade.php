@@ -144,7 +144,7 @@
             @else
                 <p>{{ $trialDays }} days free, no card needed. Make a dynamic code and edit it whenever you like.</p>
                 <div class="eq-actions">
-                    <a href="{{ route('filament.admin.auth.register') }}" class="eq-btn eq-btn-dark eq-btn--sm">Start the free trial</a>
+                    <a href="{{ \App\Filament\Pages\Auth\Register::linkFrom(\App\Enums\SignupSource::LandingCta, $page->slug) }}" class="eq-btn eq-btn-dark eq-btn--sm">Start the free trial</a>
                 </div>
             @endauth
         </div>

@@ -41,6 +41,18 @@ enum SignupSource: string
     case StaticInline = 'static-inline';
 
     /**
+     * The "Start the free trial" button near the foot of every Landing Page,
+     * below the explanation of when a case needs a dynamic code.
+     *
+     * One case for every page rather than one per page: which page it sat on
+     * is the Signup Landing Page, a separate column, so the enum stays a list
+     * of kinds of link (ADR-0004). The generator on a Landing Page keeps the
+     * two arms above, so a visitor who converts from its offer there is
+     * counted against the offer, not against this button.
+     */
+    case LandingCta = 'landing-cta';
+
+    /**
      * Resolve a `?ref=` value, or null if it is not one we published.
      *
      * Null is not a failure and is never reported as one: most registrations

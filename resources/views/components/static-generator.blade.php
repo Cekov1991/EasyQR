@@ -7,6 +7,8 @@
     wherever they made it.
 
     `page` names the page it is embedded on: `home`, or a Landing Page slug.
+    The offer and the inline link carry it to registration as the Signup
+    Landing Page, beside their own refs.
     Anything passed in the slot sits beside the static card in the same grid,
     which is how the homepage keeps its dynamic teaser card next to it.
 
@@ -58,7 +60,7 @@
                 <a href="{{ route('filament.admin.resources.qr-codes.create') }}">Create a dynamic QR</a>
             @else
                 {{-- Tagged so its conversions can be told apart from the offer's below. --}}
-                <a href="{{ route('filament.admin.auth.register', ['ref' => \App\Enums\SignupSource::StaticInline->value]) }}">Create a dynamic QR</a>
+                <a href="{{ \App\Filament\Pages\Auth\Register::linkFrom(\App\Enums\SignupSource::StaticInline, $page) }}">Create a dynamic QR</a>
             @endauth
         </p>
     </div>
@@ -116,7 +118,7 @@
 
         <div class="eq-offer-actions">
             <a id="static-offer-cta"
-               href="{{ route('filament.admin.auth.register', ['ref' => \App\Enums\SignupSource::StaticOffer->value]) }}"
+               href="{{ \App\Filament\Pages\Auth\Register::linkFrom(\App\Enums\SignupSource::StaticOffer, $page) }}"
                class="eq-btn eq-btn-primary eq-btn--sm">Start the free trial</a>
             <button type="button" id="static-offer-no" class="eq-offer-quiet">No thanks</button>
         </div>

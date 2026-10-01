@@ -291,7 +291,7 @@ class StaticOfferTest extends TestCase
     {
         $response = $this->get('/')->assertOk();
 
-        foreach (SignupSource::cases() as $source) {
+        foreach ([SignupSource::StaticOffer, SignupSource::StaticInline] as $source) {
             $response->assertSee('ref='.$source->value, false);
         }
     }

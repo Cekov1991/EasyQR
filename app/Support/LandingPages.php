@@ -231,6 +231,16 @@ class LandingPages
     }
 
     /**
+     * Resolve a slug that arrived on a URL to a page a visitor can reach, or
+     * null. The homepage label is not a Landing Page, and neither is a page
+     * still in review: nobody could have clicked a link on it.
+     */
+    public static function publishedSlug(?string $slug): ?string
+    {
+        return $slug !== null && self::isPublished($slug) ? $slug : null;
+    }
+
+    /**
      * Where a page sends a reader next. The hub links to every published page,
      * as the map of the rest. Any other page links up to three of its own
      * siblings and then the hub. Unpublished pages are skipped, so a link here

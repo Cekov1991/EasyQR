@@ -8,6 +8,7 @@ use App\Models\SiteEvent;
 use App\Models\User;
 use App\Support\LandingPages;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 
 /**
@@ -40,7 +41,7 @@ class FunnelReport extends Command
 {
     protected $signature = 'funnel:report
         {--days=30 : How many days back to report on}
-        {--by-page : Also break the page events down by the page they happened on}';
+        {--by-page : Also break the page events and the registrations down by page}';
 
     protected $description = 'Report the homepage-to-subscription funnel over a recent window';
 
@@ -110,6 +111,10 @@ class FunnelReport extends Command
 
         $this->registrationTable($since);
 
+        if ($this->option('by-page')) {
+            $this->landingPageRegistrationTable($since);
+        }
+
         $this->newLine();
         $this->line('<fg=gray>  The offer figures are reported by browsers and are forgeable up to the</>');
         $this->line('<fg=gray>  endpoint throttle. Registration and subscription figures come from account</>');
@@ -162,6 +167,69 @@ class FunnelReport extends Command
         $this->newLine();
         $this->line('  <options=bold>Registrations by source</> <fg=gray>— from account rows, exact</>');
         $this->table(['Source', 'Registered', 'Subscribed', 'Conversion'], $rows);
+    }
+
+    /**
+     * Registrations by the Landing Page their link sat on, split by which link
+     * it was, so the offer against the inline link reads on every page as it
+     * does on the homepage. Exact, like the table above.
+     *
+     * Only pairs with a registration in the window are listed. Everything else
+     * is one row, so the column still adds up to the accounts made in the
+     * window: a page is null for every registration from the homepage or from
+     * nowhere in particular, and for every one made before the column existed.
+     */
+    private function landingPageRegistrationTable(Carbon $since): void
+    {
+        $inWindow = fn (): Builder => User::query()->where('created_at', '>=', $since);
+
+        $credited = fn (): Builder => $inWindow()
+            ->whereNotNull('signup_landing_page')
+            ->selectRaw('signup_landing_page, signup_source, count(*) as total')
+            ->groupBy('signup_landing_page', 'signup_source')
+            ->orderBy('signup_landing_page')
+            ->orderBy('signup_source');
+
+        $subscribed = $credited()
+            ->whereHas('subscriptions')
+            ->toBase()
+            ->get()
+            ->mapWithKeys(fn (object $row): array => [$this->pageAndSource($row) => (int) $row->total]);
+
+        $rows = $credited()
+            ->toBase()
+            ->get()
+            ->map(function (object $row) use ($subscribed): array {
+                $subscribedCount = $subscribed[$this->pageAndSource($row)] ?? 0;
+
+                return [
+                    $row->signup_landing_page,
+                    $row->signup_source,
+                    (int) $row->total,
+                    $subscribedCount,
+                    $this->rate($subscribedCount, (int) $row->total),
+                ];
+            })
+            ->all();
+
+        $uncredited = $inWindow()->whereNull('signup_landing_page');
+        $uncreditedTotal = (clone $uncredited)->count();
+        $uncreditedPaying = (clone $uncredited)->whereHas('subscriptions')->count();
+
+        $rows[] = ['(no landing page)', '—', $uncreditedTotal, $uncreditedPaying, $this->rate($uncreditedPaying, $uncreditedTotal)];
+
+        $this->newLine();
+        $this->line('  <options=bold>Registrations by landing page</> <fg=gray>— from account rows, exact</>');
+        $this->table(['Page', 'Source', 'Registered', 'Subscribed', 'Conversion'], $rows);
+    }
+
+    /**
+     * One key per page-and-source pair, for matching a pair's subscribed
+     * count back to its registered count.
+     */
+    private function pageAndSource(object $row): string
+    {
+        return $row->signup_landing_page.'|'.$row->signup_source;
     }
 
     /**
