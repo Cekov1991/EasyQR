@@ -12,6 +12,7 @@ use App\Support\SubscriptionPrice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -115,20 +116,6 @@ class LandingPageTest extends TestCase
         $this->assertSame([self::HUB], array_keys(LandingPages::published()));
     }
 
-    public function test_the_hub_fits_in_a_search_result(): void
-    {
-        $this->publishLandingPage(self::HUB);
-
-        $html = $this->get('/'.self::HUB)->assertOk()->getContent();
-
-        preg_match('~<title>(.*?)</title>~s', $html, $title);
-        preg_match('~<meta name="description" content="(.*?)">~s', $html, $description);
-
-        $this->assertLessThanOrEqual(60, mb_strlen(html_entity_decode($title[1])), 'The title is cut off in a search result.');
-        $this->assertLessThanOrEqual(155, mb_strlen(html_entity_decode($description[1])), 'The description is cut off in a search result.');
-        $this->assertStringContainsString('<link rel="canonical" href="'.url('/'.self::HUB).'">', $html);
-    }
-
     /**
      * The layout appends the site name, so the registry's title has to leave
      * room for it.
@@ -149,76 +136,152 @@ class LandingPageTest extends TestCase
         $this->assertSame($pages->count(), $pages->pluck('description')->unique()->count(), 'Two pages share a description.');
     }
 
-    public function test_the_hub_says_what_it_is_about_in_its_h1(): void
+    /**
+     * The pages drafted first, so a person can set the voice on them before
+     * the other ten are written.
+     *
+     * @return array<string, array{0: string}>
+     */
+    public static function voicePilotProvider(): array
     {
-        $page = LandingPages::find(self::HUB);
+        return [
+            'hub' => [self::HUB],
+            'problem' => ['qr-code-stopped-working'],
+            'use case' => ['restaurant-menu-qr-code'],
+        ];
+    }
+
+    #[DataProvider('voicePilotProvider')]
+    public function test_a_pilot_page_fits_in_a_search_result(string $slug): void
+    {
+        $this->publishLandingPage($slug);
+
+        $html = $this->get('/'.$slug)->assertOk()->getContent();
+
+        preg_match('~<title>(.*?)</title>~s', $html, $title);
+        preg_match('~<meta name="description" content="(.*?)">~s', $html, $description);
+
+        $this->assertLessThanOrEqual(60, mb_strlen(html_entity_decode($title[1])), 'The title is cut off in a search result.');
+        $this->assertLessThanOrEqual(155, mb_strlen(html_entity_decode($description[1])), 'The description is cut off in a search result.');
+        $this->assertStringContainsString('<link rel="canonical" href="'.url('/'.$slug).'">', $html);
+    }
+
+    #[DataProvider('voicePilotProvider')]
+    public function test_a_pilot_page_says_what_it_is_about_in_its_h1(string $slug): void
+    {
+        $page = LandingPages::find($slug);
 
         $this->assertStringContainsStringIgnoringCase($page->keyword, $page->h1);
     }
 
-    public function test_the_hub_is_marked_up_as_questions_and_as_the_product(): void
+    #[DataProvider('voicePilotProvider')]
+    public function test_a_pilot_page_has_related_pages(string $slug): void
     {
-        $this->publishLandingPage(self::HUB);
+        $page = LandingPages::find($slug);
 
-        $graph = $this->graphFrom($this->get('/'.self::HUB));
+        $this->publishLandingPage(...array_keys(LandingPages::all()));
+
+        $this->assertNotEmpty(LandingPages::relatedTo($page));
+    }
+
+    /**
+     * Long enough to answer the search properly, short enough to read on a
+     * phone. Counted from the answer under the H1 to the call to action,
+     * the FAQ included.
+     */
+    #[DataProvider('voicePilotProvider')]
+    public function test_a_pilot_page_is_the_length_the_spec_sets(string $slug): void
+    {
+        $this->publishLandingPage($slug);
+
+        $words = $this->bodyWordCount($this->get('/'.$slug));
+
+        $this->assertGreaterThanOrEqual(600, $words, "{$slug} has {$words} words of body copy.");
+        $this->assertLessThanOrEqual(1000, $words, "{$slug} has {$words} words of body copy.");
+    }
+
+    #[DataProvider('voicePilotProvider')]
+    public function test_a_pilot_page_is_marked_up_as_questions_and_as_the_product(string $slug): void
+    {
+        $this->publishLandingPage($slug);
+
+        $graph = $this->graphFrom($this->get('/'.$slug));
 
         $this->assertNotNull($this->node($graph, 'SoftwareApplication'));
 
         $faq = $this->node($graph, 'FAQPage');
-        $page = LandingPages::find(self::HUB);
+        $page = LandingPages::find($slug);
 
         $this->assertNotNull($faq);
-        $this->assertSame(url('/'.self::HUB), $faq['url']);
-        $this->assertSame(url('/'.self::HUB).'#faq', $faq['@id']);
+        $this->assertSame(url('/'.$slug), $faq['url']);
+        $this->assertSame(url('/'.$slug).'#faq', $faq['@id']);
         $this->assertCount(count($page->faq()), $faq['mainEntity']);
         $this->assertGreaterThanOrEqual(3, count($faq['mainEntity']));
         $this->assertLessThanOrEqual(5, count($faq['mainEntity']));
 
         foreach ($faq['mainEntity'] as $question) {
             $this->assertSame('Question', $question['@type']);
-            $this->assertStringStartsWith(url('/'.self::HUB).'#', $question['@id']);
+            $this->assertStringStartsWith(url('/'.$slug).'#', $question['@id']);
             $this->assertNotEmpty($question['acceptedAnswer']['text']);
         }
     }
 
     /**
-     * An existing answer is never reworded: the hub quotes the FAQ page.
+     * An existing answer is never reworded: a page quotes the FAQ page.
      */
-    public function test_reused_answers_read_exactly_as_they_do_on_the_faq_page(): void
+    #[DataProvider('voicePilotProvider')]
+    public function test_reused_answers_read_exactly_as_they_do_on_the_faq_page(string $slug): void
     {
-        $this->publishLandingPage(self::HUB);
+        $this->publishLandingPage($slug);
 
-        $hub = $this->get('/'.self::HUB)->assertOk();
+        $landing = $this->get('/'.$slug)->assertOk();
         $faq = $this->get('/faq')->assertOk();
 
-        $reused = array_filter(LandingPages::find(self::HUB)->faq, 'is_string');
+        $reused = array_filter(LandingPages::find($slug)->faq, 'is_string');
 
-        $this->assertNotEmpty($reused, 'The hub reuses no FAQ answers.');
+        $this->assertNotEmpty($reused, "{$slug} reuses no FAQ answers.");
 
         foreach ($reused as $id) {
             $entry = Faq::find($id);
 
-            $hub->assertSee($entry['question'], false)->assertSee($entry['answer'], false);
+            $landing->assertSee($entry['question'], false)->assertSee($entry['answer'], false);
             $faq->assertSee($entry['answer'], false);
         }
     }
 
-    public function test_every_question_on_the_hub_is_addressable(): void
+    /**
+     * A question this page asks of its own must not be one the FAQ page
+     * already answers, or the two answers drift apart.
+     */
+    #[DataProvider('voicePilotProvider')]
+    public function test_a_pilot_page_reuses_a_question_rather_than_rewording_it(string $slug): void
     {
-        $this->publishLandingPage(self::HUB);
+        $existing = collect(Faq::questions());
 
-        $response = $this->get('/'.self::HUB)->assertOk();
+        foreach (array_filter(LandingPages::find($slug)->faq, 'is_array') as $entry) {
+            $this->assertNull($existing->firstWhere('id', $entry['id']), "{$slug} redefines the FAQ entry {$entry['id']}.");
+            $this->assertNull($existing->firstWhere('question', $entry['question']), "{$slug} rewords an existing FAQ question.");
+        }
+    }
 
-        foreach (LandingPages::find(self::HUB)->faq() as $entry) {
+    #[DataProvider('voicePilotProvider')]
+    public function test_every_question_on_a_pilot_page_is_addressable(string $slug): void
+    {
+        $this->publishLandingPage($slug);
+
+        $response = $this->get('/'.$slug)->assertOk();
+
+        foreach (LandingPages::find($slug)->faq() as $entry) {
             $response->assertSee('id="'.$entry['id'].'"', false);
         }
     }
 
     /**
-     * Every price the hub states is the configured one, in the copy and in
+     * Every price a page states is the configured one, in the copy and in
      * the markup a machine quotes.
      */
-    public function test_a_price_change_in_config_reaches_the_copy_and_the_markup(): void
+    #[DataProvider('voicePilotProvider')]
+    public function test_a_price_change_in_config_reaches_the_copy_and_the_markup(string $slug): void
     {
         config([
             'subscription.plans.monthly.price' => 7.50,
@@ -228,9 +291,9 @@ class LandingPageTest extends TestCase
             'subscription.quotas.dynamic' => 11,
         ]);
 
-        $this->publishLandingPage(self::HUB);
+        $this->publishLandingPage($slug);
 
-        $response = $this->get('/'.self::HUB)->assertOk();
+        $response = $this->get('/'.$slug)->assertOk();
 
         $response
             ->assertSee('$7.50')
@@ -240,7 +303,9 @@ class LandingPageTest extends TestCase
             ->assertSee('4 days')
             ->assertSee('11 dynamic codes')
             ->assertDontSee('$49')
-            ->assertDontSee('$5.90');
+            ->assertDontSee('$5.90')
+            ->assertDontSee('7-day')
+            ->assertDontSee('7 days');
 
         $offers = collect($this->node($this->graphFrom($response), 'SoftwareApplication')['offers']);
 
@@ -252,11 +317,12 @@ class LandingPageTest extends TestCase
      * The honesty rule: a page that sells dynamic codes says what happens
      * when the account lapses, and that static codes need nothing from us.
      */
-    public function test_the_hub_is_honest_about_what_happens_when_an_account_lapses(): void
+    #[DataProvider('voicePilotProvider')]
+    public function test_a_pilot_page_is_honest_about_what_happens_when_an_account_lapses(string $slug): void
     {
-        $this->publishLandingPage(self::HUB);
+        $this->publishLandingPage($slug);
 
-        $this->get('/'.self::HUB)
+        $this->get('/'.$slug)
             ->assertOk()
             ->assertSee('stop resolving')
             ->assertSee(config('subscription.grace_days').' days')
@@ -266,25 +332,48 @@ class LandingPageTest extends TestCase
     }
 
     /**
-     * The searcher's word, quoted only where the searcher used it.
+     * The searcher's word, quoted only where the searcher used it. None of
+     * the pilot pages is the page for that search.
      */
-    public function test_the_hub_does_not_call_a_lapsed_code_expired(): void
+    #[DataProvider('voicePilotProvider')]
+    public function test_a_pilot_page_does_not_call_a_lapsed_code_expired(string $slug): void
     {
-        $this->publishLandingPage(self::HUB);
+        $this->publishLandingPage($slug);
 
-        $html = $this->get('/'.self::HUB)->assertOk()->getContent();
+        $html = $this->get('/'.$slug)->assertOk()->getContent();
 
         $this->assertStringNotContainsStringIgnoringCase('expired', strip_tags($html));
     }
 
-    public function test_the_hub_embeds_the_static_generator_as_itself(): void
+    /**
+     * Each page is written from scratch for its case, so no paragraph of one
+     * page's own copy turns up on another.
+     */
+    public function test_the_pilot_pages_are_not_one_template_with_the_nouns_swapped(): void
     {
-        $this->publishLandingPage(self::HUB);
+        $paragraphs = collect(self::voicePilotProvider())
+            ->map(fn (array $case): string => file_get_contents(resource_path('views/landing/'.$case[0].'.blade.php')))
+            ->map(function (string $source): array {
+                preg_match_all('~<p>(.*?)</p>~s', $source, $matches);
 
-        $this->get('/'.self::HUB)
+                return array_map(fn (string $paragraph): string => preg_replace('~\s+~', ' ', trim(strip_tags($paragraph))), $matches[1]);
+            });
+
+        $all = $paragraphs->flatten();
+
+        $this->assertNotEmpty($all);
+        $this->assertSame($all->count(), $all->unique()->count(), 'Two pilot pages share a paragraph.');
+    }
+
+    #[DataProvider('voicePilotProvider')]
+    public function test_a_pilot_page_embeds_the_static_generator_as_itself(string $slug): void
+    {
+        $this->publishLandingPage($slug);
+
+        $this->get('/'.$slug)
             ->assertOk()
             ->assertSee('id="static-qr-form"', false)
-            ->assertSee('data-page="'.self::HUB.'"', false)
+            ->assertSee('data-page="'.$slug.'"', false)
             ->assertSee("fetch('".route('qr.instant')."'", false)
             ->assertDontSee('Log in to generate a dynamic QR');
     }
@@ -304,14 +393,16 @@ class LandingPageTest extends TestCase
         $this->assertSame($fromHome->json('svg'), $fromHub->json('svg'));
     }
 
-    public function test_the_hub_sends_strangers_to_the_trial(): void
+    #[DataProvider('voicePilotProvider')]
+    public function test_a_pilot_page_sends_strangers_to_the_trial(string $slug): void
     {
-        $this->publishLandingPage(self::HUB);
+        $this->publishLandingPage($slug);
 
-        $this->get('/'.self::HUB)
+        $this->get('/'.$slug)
             ->assertOk()
             ->assertSee('Start the free trial')
-            ->assertSee(route('filament.admin.auth.register'), false);
+            ->assertSee(route('filament.admin.auth.register'), false)
+            ->assertSee('page='.$slug, false);
     }
 
     public function test_a_published_page_is_in_the_sitemap_and_llms(): void
@@ -412,6 +503,27 @@ class LandingPageTest extends TestCase
         foreach (PublicPages::all() as $entry) {
             $this->get($entry['url'])->assertOk();
         }
+    }
+
+    /**
+     * Words a reader reads on the page itself: the answer under the H1 and
+     * the prose down to the call to action, leaving out the generator.
+     */
+    private function bodyWordCount(TestResponse $response): int
+    {
+        $html = $response->getContent();
+
+        $this->assertSame(1, preg_match('~<p class="eq-lead">(.*?)</p>~s', $html, $lead), 'The page has no answer under its H1.');
+
+        $start = strpos($html, '<div class="eq-prose">');
+        $this->assertNotFalse($start, 'The page has no prose.');
+
+        $end = strpos($html, '<div class="eq-result-panel">', $start);
+        $this->assertNotFalse($end, 'The page has no call to action after its prose.');
+
+        $prose = substr($html, $start, $end - $start);
+
+        return str_word_count(html_entity_decode(strip_tags($lead[1].' '.$prose)));
     }
 
     /**

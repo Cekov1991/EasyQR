@@ -66,7 +66,12 @@ class LandingPages
                 h1: 'QR code stopped working? Here is why',
                 keyword: 'qr code stopped working',
                 related: ['qr-code-expired', 'fix-printed-qr-code', 'free-qr-code-no-expiration'],
-                faq: [],
+                faq: [
+                    self::canItStopOnItsOwn(),
+                    self::askedToUpgrade(),
+                    'static-expiry',
+                    'stop-paying',
+                ],
                 published: false,
             ),
             new LandingPage(
@@ -113,10 +118,15 @@ class LandingPages
                 slug: 'restaurant-menu-qr-code',
                 title: 'QR code for a restaurant menu',
                 description: 'Put one QR code on every table and change the menu behind it whenever the dishes or prices change, without reprinting a single table tent.',
-                h1: 'A QR code for your restaurant menu',
+                h1: 'QR code for restaurant menus: print once, change the menu',
                 keyword: 'qr code for restaurant menu',
                 related: ['flyer-poster-qr-code', 'event-qr-code', 'fix-printed-qr-code'],
-                faq: [],
+                faq: [
+                    self::oneCodePerTable(),
+                    self::menuAsPdf(),
+                    'edit-after-printing',
+                    'printing',
+                ],
                 published: false,
             ),
             new LandingPage(
@@ -302,6 +312,94 @@ class LandingPages
                 <p>
                     If it might — a menu, a listing, an event schedule, a campaign that moves — print a
                     dynamic code. A static code can only be corrected by printing a new one.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * What someone holding a dead code suspects first: that codes wear out.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function canItStopOnItsOwn(): array
+    {
+        return [
+            'id' => 'stop-on-its-own',
+            'question' => 'Can a QR code stop working on its own?',
+            'answer' => <<<'HTML'
+                <p>
+                    No. The pattern is just a link drawn in squares, and it does not wear out or run down.
+                    When a code that used to work stops, something behind it changed: the page it opens
+                    was moved or taken down, or the service it runs through stopped sending scans on. The
+                    other cause is physical, such as a faded, scratched or badly reprinted code.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * What the trap looks like from the phone of whoever scanned the code.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function askedToUpgrade(): array
+    {
+        return [
+            'id' => 'asked-to-upgrade',
+            'question' => 'Why does my QR code open a page asking me to upgrade?',
+            'answer' => <<<'HTML'
+                <p>
+                    Because it is a dynamic code and nobody is paying for the account it belongs to any
+                    more, most often after a free trial ran out. The person scanning cannot fix that.
+                    Whoever made the code can, by paying that service or by printing a new code. Our
+                    own inactive codes show a plain notice instead, and never ask a stranger to pay.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * A restaurant prints the code many times, and the first thing it asks is
+     * whether each copy has to be its own code.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function oneCodePerTable(): array
+    {
+        $dynamic = (int) config('subscription.quotas.dynamic');
+
+        return [
+            'id' => 'one-code-per-table',
+            'question' => 'Do I need a different QR code for every table?',
+            'answer' => <<<HTML
+                <p>
+                    No. One code can be printed as many times as you like, and every copy opens the same
+                    menu. Use separate codes only when you want to count scans
+                    separately, say for the terrace and the dining room, or for two sites. A
+                    subscription covers {$dynamic} dynamic codes.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * Most menus already exist as a PDF, so the question is whether that is
+     * good enough to point a code at.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function menuAsPdf(): array
+    {
+        return [
+            'id' => 'menu-as-pdf',
+            'question' => 'Can the code open a PDF of my menu?',
+            'answer' => <<<'HTML'
+                <p>
+                    Yes. A code opens any link, and a PDF with its own link works like any other page. We
+                    do not host the file, so put it on your website or a file-sharing service first and
+                    copy the link from there. A plain web page reads better on a phone than a PDF does,
+                    but a PDF is a fine place to start.
                 </p>
                 HTML,
         ];
