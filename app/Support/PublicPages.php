@@ -25,6 +25,14 @@ class PublicPages
      */
     public static function all(): array
     {
+        return [...self::fixed(), ...self::landingPages()];
+    }
+
+    /**
+     * @return array<int, array{url: string, title: string, summary: string}>
+     */
+    private static function fixed(): array
+    {
         return [
             [
                 'url' => route('welcome'),
@@ -62,6 +70,21 @@ class PublicPages
                 'summary' => 'How refunds work for the dynamic QR code subscription.',
             ],
         ];
+    }
+
+    /**
+     * Published Landing Pages only: an unpublished one has no route, and a
+     * sitemap entry for it would advertise a 404.
+     *
+     * @return array<int, array{url: string, title: string, summary: string}>
+     */
+    private static function landingPages(): array
+    {
+        return array_values(array_map(fn (LandingPage $page): array => [
+            'url' => $page->url(),
+            'title' => $page->title,
+            'summary' => $page->description,
+        ], LandingPages::published()));
     }
 
     /**

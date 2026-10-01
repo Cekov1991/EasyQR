@@ -224,4 +224,20 @@ return [
         'url' => env('SITE_CREDIT_URL'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Landing Pages
+    |--------------------------------------------------------------------------
+    |
+    | Slugs to treat as published whatever App\Support\LandingPages says. Empty
+    | in every real environment, and deliberately not read from the environment:
+    | a page is published by a person flipping its flag in the registry after
+    | reading the copy. This exists so a test can render a page still in review.
+    |
+    */
+
+    'landing_pages' => [
+        'publish' => [],
+    ],
+
 ];
