@@ -1,0 +1,219 @@
+/*
+ * The dashboard's Design editor, "Studio" (resources/views/filament/forms/components/design-editor.blade.php).
+ * A plain stylesheet registered as a Filament asset, not a Filament theme. The
+ * controls take their colours from the panel (Filament's --gray-* palette, which
+ * flips with the .dark class), while the preview surround is always light: a code
+ * is judged against its own background, not against a dark page.
+ */
+.eq-studio {
+    --eq-ink: rgb(var(--gray-950));
+    --eq-muted: rgb(var(--gray-500));
+    --eq-surface: #ffffff;
+    --eq-border-strong: rgb(var(--gray-300));
+    --eq-primary: rgb(var(--primary-600));
+    --eq-accent: rgb(var(--primary-500));
+    --eq-link: rgb(var(--primary-600));
+    --studio-card: #ffffff;
+    --studio-card-border: rgb(var(--gray-200));
+
+    display: grid;
+    gap: 24px;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    color: var(--eq-ink);
+}
+
+.dark .eq-studio {
+    --eq-ink: rgb(var(--gray-50));
+    --eq-muted: rgb(var(--gray-400));
+    --eq-surface: rgb(var(--gray-900));
+    --eq-border-strong: rgb(var(--gray-600));
+    --eq-primary: rgb(var(--primary-400));
+    --eq-accent: rgb(var(--primary-400));
+    --eq-link: rgb(var(--primary-400));
+    --studio-card: rgb(var(--gray-900));
+    --studio-card-border: rgb(var(--gray-800));
+}
+
+.dark .eq-studio .eq-controls-group {
+    --qrc-tile: rgb(var(--gray-800));
+    --qrc-tile-hover: rgb(var(--gray-700));
+}
+
+.eq-studio [hidden] {
+    display: none;
+}
+
+@media (min-width: 1024px) {
+    .eq-studio {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 460px);
+        gap: 40px;
+    }
+
+    .eq-studio-aside {
+        position: sticky;
+        top: 6rem;
+    }
+}
+
+.eq-studio-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 220px;
+    padding: 20px;
+    border: 1px solid #e3e7ec;
+    border-radius: 20px;
+    background: #f4f6f8;
+    color: #5a5f6e;
+}
+
+.eq-studio-code {
+    width: 100%;
+    max-width: 420px;
+}
+
+.eq-studio-code svg {
+    display: block;
+}
+
+.eq-studio-empty {
+    margin: 0;
+    max-width: 240px;
+    font-size: 14px;
+    line-height: 1.5;
+    text-align: center;
+}
+
+.eq-studio-notices {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.eq-studio-notices:empty {
+    display: none;
+}
+
+.eq-studio-notices li {
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: #fff6e0;
+    color: #6b4a00;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.eq-studio-notices li[data-tone="blocked"] {
+    background: #fdecea;
+    color: #8a1d14;
+    font-weight: 600;
+}
+
+.eq-studio-hint {
+    margin: 12px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--eq-muted);
+}
+
+.eq-studio-cards {
+    display: grid;
+    gap: 16px;
+}
+
+.eq-studio-card {
+    padding: 16px 20px 6px;
+    border: 1px solid var(--studio-card-border);
+    border-radius: 14px;
+    background: var(--studio-card);
+}
+
+.eq-studio-card-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--eq-ink);
+}
+
+.eq-studio-card .eq-controls-group {
+    margin-top: 10px;
+}
+
+.eq-studio-look-name {
+    margin: 12px 0 10px;
+    font-size: 13px;
+    color: var(--eq-muted);
+}
+
+.eq-studio-look-name strong {
+    color: var(--eq-ink);
+}
+
+.eq-studio .eq-looks {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.eq-studio .eq-look {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.eq-studio .eq-look-thumb {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    padding: 4px;
+    border: 2px solid transparent;
+    border-radius: 14px;
+    background: #f4f6f8;
+    box-sizing: border-box;
+}
+
+.eq-studio .eq-look-thumb svg {
+    display: block;
+}
+
+.eq-studio .eq-look[aria-pressed="true"] .eq-look-thumb {
+    border-color: var(--eq-primary);
+}
+
+.eq-studio .eq-look-name {
+    font-size: 12.5px;
+    color: var(--eq-muted);
+}
+
+.eq-studio .eq-look[aria-pressed="true"] .eq-look-name {
+    color: var(--eq-ink);
+    font-weight: 600;
+}
+
+.eq-studio .eq-look:focus-visible {
+    outline: 2px solid var(--eq-accent);
+    outline-offset: 2px;
+}
+
+.eq-studio .eq-input {
+    width: 100%;
+    max-width: 280px;
+    padding: 8px 10px;
+    border: 1px solid var(--eq-border-strong);
+    border-radius: 9px;
+    background: transparent;
+    color: var(--eq-ink);
+    font: inherit;
+    font-size: 14px;
+}

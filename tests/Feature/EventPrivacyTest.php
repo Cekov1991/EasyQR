@@ -65,7 +65,7 @@ class EventPrivacyTest extends TestCase
 
         $this->withServerVariables(['REMOTE_ADDR' => $ip])
             ->withHeaders(['User-Agent' => $agent])
-            ->postJson(route('qr.instant'), ['url' => 'https://example.com']);
+            ->postJson(route('events.log'), ['event' => TrackedEvent::StaticQrGenerated->value]);
 
         $stored = json_encode(SiteEvent::query()->sole()->getAttributes());
 
@@ -99,14 +99,20 @@ class EventPrivacyTest extends TestCase
 
     /**
      * The URL a visitor typed is theirs. The homepage tells them we never store
-     * their code or its link, and the count written on that same request is the
-     * one thing that could quietly contradict it.
+     * their code or its link, and the count of a code being drawn is the one
+     * thing that could quietly contradict it: it is sent by the page, so it
+     * must not be able to carry the link even if a caller tries.
      */
-    public function test_generating_a_code_never_records_the_url_it_encoded(): void
+    public function test_a_drawn_code_never_records_the_url_it_encoded(): void
     {
         $url = 'https://example.com/a-private-menu-nobody-should-see';
 
-        $this->postJson(route('qr.instant'), ['url' => $url]);
+        $this->postJson(route('events.log'), [
+            'event' => TrackedEvent::StaticQrGenerated->value,
+            'url' => $url,
+            'link' => $url,
+            'context' => ['url' => $url],
+        ])->assertNoContent();
 
         $this->assertStringNotContainsString(
             'a-private-menu-nobody-should-see',

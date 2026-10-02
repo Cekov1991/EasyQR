@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\Plan;
+use App\Support\Asset;
 use App\Support\Faq;
 use App\Support\LandingPage;
 use App\Support\LandingPages;
@@ -497,23 +498,31 @@ class LandingPageTest extends TestCase
             ->assertOk()
             ->assertSee('id="static-qr-form"', false)
             ->assertSee('data-page="'.$slug.'"', false)
-            ->assertSee("fetch('".route('qr.instant')."'", false)
+            ->assertSee('id="static-url"', false)
+            ->assertSee('id="static-looks"', false)
+            ->assertSee('id="static-png-size"', false)
+            ->assertDontSee('/qr/instant', false)
             ->assertDontSee('Log in to generate a dynamic QR');
     }
 
     /**
-     * Same generator, same endpoint: the code made on a Landing Page is the
-     * code the homepage makes for the same link.
+     * Same generator, same renderer: the code made on a Landing Page is the
+     * code the homepage makes for the same link, because both draw it with the
+     * same scripts and the same editor.
      */
-    public function test_the_embedded_generator_makes_the_same_code_as_the_homepage(): void
+    public function test_the_embedded_generator_draws_with_the_same_renderer_as_the_homepage(): void
     {
         $this->publishLandingPage(self::HUB);
 
-        $fromHome = $this->from('/')->postJson(route('qr.instant'), ['url' => 'https://example.com/menu'])->assertOk();
-        $fromHub = $this->from('/'.self::HUB)->postJson(route('qr.instant'), ['url' => 'https://example.com/menu'])->assertOk();
+        $scripts = fn (string $uri): array => (function (string $html): array {
+            preg_match_all('~<script src="([^"]*/js/[^"]+)"~', $html, $matches);
 
-        $this->assertSame($fromHome->json('png'), $fromHub->json('png'));
-        $this->assertSame($fromHome->json('svg'), $fromHub->json('svg'));
+            return $matches[1];
+        })($this->get($uri)->assertOk()->getContent());
+
+        $this->assertContains(Asset::versioned('js/qr-renderer.js'), $scripts('/'));
+        $this->assertContains(Asset::versioned('js/qr-frame-font.js'), $scripts('/'));
+        $this->assertSame($scripts('/'), $scripts('/'.self::HUB));
     }
 
     #[DataProvider('draftedPageProvider')]

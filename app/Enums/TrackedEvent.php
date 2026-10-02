@@ -34,8 +34,10 @@ use App\Models\SiteEvent;
 enum TrackedEvent: string
 {
     /**
-     * A free static code was generated on the homepage. The denominator for
-     * everything else: without it, a count of offer clicks divides by nothing.
+     * A free static code was drawn: the first time a visitor's link was valid on
+     * a page view. Reported by the browser, because the link never leaves it and
+     * the server has no request to count from. The denominator for everything
+     * else: without it, a count of offer clicks divides by nothing.
      */
     case StaticQrGenerated = 'static_qr_generated';
 
@@ -74,6 +76,7 @@ enum TrackedEvent: string
     public function isClientLoggable(): bool
     {
         return match ($this) {
+            self::StaticQrGenerated,
             self::QrDownloaded,
             self::OfferShown,
             self::OfferDismissed,
@@ -99,8 +102,8 @@ enum TrackedEvent: string
      * Count one occurrence.
      *
      * Deliberately fire-and-forget and deliberately unqueued: this is one small
-     * insert with no reads, and it runs on request paths — `/` and the instant
-     * generator — where a queue round trip would cost more than the write. A
+     * insert with no reads, and it runs on request paths — the events endpoint and
+     * the checkout — where a queue round trip would cost more than the write. A
      * failure here must never break the thing being counted, so callers get no
      * return value and nothing to check.
      *

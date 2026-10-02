@@ -100,8 +100,8 @@ class PublicPages
      * customer's analytics and follows the redirect to a third-party
      * destination we do not control.
      *
-     * Every entry is a prefix, so a panel is closed with its trailing slash:
-     * a bare `/free` also closed `/free-qr-code-no-expiration`.
+     * Every entry is a prefix, so a path that can be the start of a slug needs
+     * its trailing slash.
      *
      * @return array<int, string>
      */
@@ -110,7 +110,6 @@ class PublicPages
         return [
             '/q/',
             '/admin',
-            '/free/',
             '/dashboard',
             '/profile',
             '/billing',

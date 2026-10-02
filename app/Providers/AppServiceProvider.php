@@ -3,10 +3,13 @@
 namespace App\Providers;
 
 use App\Services\AgentaOS\AgentaOsClient;
-use Filament\Events\Auth\Registered as FilamentRegistered;
+use Filament\Support\Assets\Css;
+use Filament\Support\Assets\Js;
+use Filament\Support\Facades\FilamentAsset;
+use Filament\Support\Facades\FilamentView;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -31,17 +34,30 @@ class AppServiceProvider extends ServiceProvider
     {
         Model::unguard();
 
-        /*
-         * The panel sends the verification email itself, because the admin
-         * panel is configured with emailVerification(). Nothing is sent from
-         * here: Filament's Register page fires this event and then notifies
-         * the user on the very next line, so a second send from this listener
-         * put two near-identical emails in the same inbox.
-         */
-        Event::listen(FilamentRegistered::class, function (FilamentRegistered $event) {
-            if (Session::has('pending_qr_code')) {
-                Session::put('redirect_to_qr_creation', true);
-            }
-        });
+        $this->registerQrRenderer();
+    }
+
+    /**
+     * The renderer reaches the admin panel as Filament assets, in the order they
+     * depend on each other, served from this site and versioned by Filament. The
+     * option data is printed ahead of them because the renderer reads it on load.
+     */
+    private function registerQrRenderer(): void
+    {
+        FilamentAsset::register([
+            ...array_map(
+                fn (string $file): Js => Js::make($file, public_path("js/{$file}.js")),
+                ['qrcode-generator', 'qr-frame-font', 'qr-renderer', 'qr-drawing', 'qr-download', 'qr-design-controls', 'qr-design-editor'],
+            ),
+            ...array_map(
+                fn (string $file): Css => Css::make($file, public_path("css/{$file}.css")),
+                ['qr-design-controls', 'qr-design-editor'],
+            ),
+        ]);
+
+        FilamentView::registerRenderHook(
+            PanelsRenderHook::SCRIPTS_BEFORE,
+            fn (): string => Blade::render('<x-qr-design-controls.data />'),
+        );
     }
 }

@@ -17,7 +17,7 @@ use Illuminate\Validation\Rule;
  * shape it:
  *
  * 1. Only the events that genuinely cannot be seen from the server. Everything
- *    else — the generations, the checkouts — is recorded on a path we control,
+ *    else — the checkouts — is recorded on a path we control,
  *    and TrackedEvent::isClientLoggable() is the list. Accepting more than that
  *    would let anyone POST `checkout_completed` in a loop and quietly ruin the
  *    only record we have of revenue, undetectably, because there is no

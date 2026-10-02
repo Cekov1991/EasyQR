@@ -2,13 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Filament\Resources\QrCodeResource\Pages\CreateQrCode;
 use App\Models\QrCode;
-use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
-use Livewire\Livewire;
 use SimpleSoftwareIO\QrCode\Facades\QrCode as QrCodeGenerator;
 use Tests\TestCase;
 
@@ -128,31 +125,6 @@ class QrCodeStyleTest extends TestCase
         $this->assertNotSame($this->render(['style' => 'square']), $stored);
     }
 
-    public function test_a_chosen_style_is_persisted_and_used_for_the_stored_image(): void
-    {
-        $user = User::factory()->create();
-        $this->actingAs($user);
-
-        Livewire::test(CreateQrCode::class)
-            ->fillForm([
-                'name' => 'Dotted code',
-                'type' => 'static',
-                'qr_content_type' => 'website',
-                'qr_content_data' => ['url' => self::CONTENT],
-                'options' => ['style' => 'dot', 'format' => 'png', 'size' => 300, 'errorCorrection' => 'M'],
-            ])
-            ->call('create')
-            ->assertHasNoFormErrors();
-
-        $qrCode = $user->qrCodes()->sole();
-
-        $this->assertSame('dot', $qrCode->options['style']);
-        $this->assertSame(
-            $this->render(['style' => 'dot']),
-            Storage::get($qrCode->qr_code_image),
-        );
-    }
-
     /**
      * The zip of alternate formats used to drop the record's colour, so the
      * PNG inside it did not match its SVG and EPS siblings.
@@ -166,24 +138,6 @@ class QrCodeStyleTest extends TestCase
 
         $this->assertNotSame($black, $red);
         $this->assertStringContainsStringIgnoringCase('ff0000', $red);
-    }
-
-    public function test_the_style_picker_renders_a_selectable_sample_for_every_style(): void
-    {
-        $user = User::factory()->create();
-        $this->actingAs($user);
-
-        $page = Livewire::test(CreateQrCode::class);
-
-        $page->assertSeeHtml('eq-style-picker');
-
-        // Without a live binding the tiles would render but never change the state.
-        $page->assertSeeHtml('wire:model="data.options.style"');
-
-        foreach (QrCode::QR_STYLES as $style => $label) {
-            $page->assertSeeHtml(QrCode::styleSample($style));
-            $page->assertSeeHtml($label.' sample');
-        }
     }
 
     public function test_each_style_sample_is_a_distinct_inline_svg(): void
@@ -201,16 +155,15 @@ class QrCodeStyleTest extends TestCase
         $this->assertCount(count(QrCode::QR_STYLES), array_unique($samples));
     }
 
-    public function test_the_instant_landing_page_code_uses_the_default_style(): void
+    /**
+     * The homepage no longer asks the server for a code, so there is no server
+     * default to hold it to: the editor opens on the Rounded Look, which the
+     * renderer's tests (tests/js) pin as the default Design.
+     */
+    public function test_the_server_no_longer_makes_a_code_for_the_homepage(): void
     {
-        $response = $this->postJson(route('qr.instant'), ['url' => self::CONTENT]);
+        $this->postJson('/qr/instant', ['url' => self::CONTENT])->assertNotFound();
 
-        $response->assertOk();
-
-        $expected = 'data:image/png;base64,'.base64_encode(
-            $this->render(['style' => QrCode::DEFAULT_STYLE, 'size' => 600])
-        );
-
-        $this->assertSame($expected, $response->json('png'));
+        $this->get('/')->assertOk();
     }
 }

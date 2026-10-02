@@ -26,7 +26,7 @@ class SiteEventPageTest extends TestCase
      */
     private function generate(array $payload = []): TestResponse
     {
-        return $this->postJson(route('qr.instant'), ['url' => 'https://example.com'] + $payload);
+        return $this->report(['event' => TrackedEvent::StaticQrGenerated->value] + $payload);
     }
 
     /**
@@ -58,14 +58,14 @@ class SiteEventPageTest extends TestCase
     {
         $this->publishLandingPage(LandingPages::HUB);
 
-        $this->generate(['page' => LandingPages::HUB])->assertOk();
+        $this->generate(['page' => LandingPages::HUB])->assertNoContent();
 
         $this->assertSame(['page' => LandingPages::HUB], SiteEvent::query()->sole()->context);
     }
 
     public function test_a_generation_on_the_homepage_carries_home(): void
     {
-        $this->generate(['page' => LandingPages::HOME])->assertOk();
+        $this->generate(['page' => LandingPages::HOME])->assertNoContent();
 
         $this->assertSame(['page' => LandingPages::HOME], SiteEvent::query()->sole()->context);
     }
@@ -76,7 +76,7 @@ class SiteEventPageTest extends TestCase
      */
     public function test_a_generation_without_a_label_is_counted_as_home(): void
     {
-        $this->generate()->assertOk();
+        $this->generate()->assertNoContent();
 
         $this->assertSame(['page' => LandingPages::HOME], SiteEvent::query()->sole()->context);
     }
@@ -87,7 +87,7 @@ class SiteEventPageTest extends TestCase
      */
     public function test_an_empty_label_is_counted_as_home(): void
     {
-        $this->generate(['page' => ''])->assertOk();
+        $this->generate(['page' => ''])->assertNoContent();
         $this->report(['event' => TrackedEvent::OfferShown->value, 'page' => ''])->assertNoContent();
 
         $this->assertSame(2, SiteEvent::query()->onPage(LandingPages::HOME)->count());
@@ -204,7 +204,7 @@ class SiteEventPageTest extends TestCase
         $this->get(route(LandingPages::find(LandingPages::HUB)->routeName()))
             ->assertOk()
             ->assertSee('data-page="'.LandingPages::HUB.'"', false)
-            ->assertSee('url: url, page: page', false)
-            ->assertSee('{ event: event, page: page }', false);
+            ->assertSee('{ event: event, page: page }', false)
+            ->assertSee('const page = form.dataset.page', false);
     }
 }

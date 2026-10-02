@@ -18,6 +18,14 @@ _Avoid_: trackable QR, editable QR (both are consequences, not the definition)
 The 8-character public identifier in a Dynamic QR Code's encoded URL, permanent for the life of the code because the printed image cannot be reissued.
 _Avoid_: slug, code, token
 
+**Design**:
+How one QR Code looks — the shape of its modules, corners and eyes, its colours, its frame and its logo. Owned by that code alone, and never changes what the code encodes or whether it resolves.
+_Avoid_: style, theme, template
+
+**Look**:
+A named starting Design (Rounded, Ink, Bloom, Soft). Choosing one copies its settings into the code's Design; the code keeps no link to the Look, so changing a Look never touches a code already made — a printed image cannot be reissued.
+_Avoid_: preset, style
+
 **Scan**:
 One resolution of a Dynamic QR Code through `/q/{shortUrl}`, logged with device, browser, and geolocation. Static QR Codes produce no Scans by construction.
 
