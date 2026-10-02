@@ -159,7 +159,7 @@ class CrawlerDiscoveryTest extends TestCase
 
     /**
      * robots.txt matches by prefix, so a closed path can swallow a slug that
-     * merely starts with it: `/free` once closed `/free-qr-code-no-expiration`.
+     * merely starts with it: a closed `/admin` must not close `/administrators-guide`.
      * Checked against every page in the registry, published or not, so a
      * draft cannot be written into a slug no crawler will ever fetch.
      */

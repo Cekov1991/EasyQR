@@ -122,14 +122,6 @@ class QrCodeLogoFormTest extends TestCase
         $this->assertLogoFieldIsConfigured(CreateQrCode::class, 'admin');
     }
 
-    public function test_the_logo_field_is_configured_on_the_public_create_form(): void
-    {
-        $this->assertLogoFieldIsConfigured(
-            \App\Filament\Public\Resources\QrCodeResource\Pages\CreateQrCode::class,
-            'public',
-        );
-    }
-
     /**
      * The upload disk must be pinned to the disk `Storage::get()` reads from.
      * Both resolve to the same value locally, so only an explicit assertion

@@ -444,7 +444,6 @@ class QrCodeResource extends Resource
         return [
             'index' => Pages\ListQrCodes::route('/'),
             'create' => Pages\CreateQrCode::route('/create'),
-            'create-from-session' => Pages\CreateFromSession::route('/create-from-session'),
             'view' => Pages\ViewQrCode::route('/{record}'),
             'edit' => Pages\EditQrCode::route('/{record}/edit'),
         ];
