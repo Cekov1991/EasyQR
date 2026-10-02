@@ -29,7 +29,7 @@ class QrCodeResource extends Resource
             ->schema([
                 Section::make('Basic Information')
                     ->schema([
-                        Grid::make(2)
+                        Grid::make(['default' => 1, 'md' => 3])
                             ->schema([
                                 Forms\Components\TextInput::make('name')
                                     ->required()
@@ -43,21 +43,17 @@ class QrCodeResource extends Resource
                                     ->helperText(fn (?QrCode $record): ?string => $record === null
                                         ? static::dynamicUnavailableReason()
                                         : null),
+                                Forms\Components\Select::make('qr_content_type')
+                                    ->label('QR Code Type')
+                                    ->options(QrCode::QR_CONTENT_TYPES)
+                                    ->default('website')
+                                    ->required()
+                                    ->live()
+                                    ->afterStateUpdated(fn (Forms\Set $set) => $set('qr_content_data', []))
+                                    ->disabled(fn ($record) => $record?->type === 'static')
+                                    ->visible(fn ($record) => $record?->type !== 'static'),
                             ]),
                     ]),
-
-                Section::make('QR Code Type')
-                    ->schema([
-                        Forms\Components\Select::make('qr_content_type')
-                            ->label('QR Code Type')
-                            ->options(QrCode::QR_CONTENT_TYPES)
-                            ->default('website')
-                            ->required()
-                            ->live()
-                            ->afterStateUpdated(fn (Forms\Set $set) => $set('qr_content_data', []))
-                            ->disabled(fn ($record) => $record?->type === 'static'),
-                    ])
-                    ->visible(fn ($record) => $record?->type !== 'static'),
 
                 // All content sections - only visible/enabled for dynamic QR codes or new records
                 Section::make('Website Configuration')
