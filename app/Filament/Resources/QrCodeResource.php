@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\Components\DesignEditor;
 use App\Filament\Resources\QrCodeResource\Pages;
 use App\Filament\Resources\QrCodeResource\RelationManagers\ScansRelationManager;
 use App\Models\QrCode;
@@ -28,7 +29,7 @@ class QrCodeResource extends Resource
             ->schema([
                 Section::make('Basic Information')
                     ->schema([
-                        Grid::make(2)
+                        Grid::make(['default' => 1, 'md' => 3])
                             ->schema([
                                 Forms\Components\TextInput::make('name')
                                     ->required()
@@ -42,21 +43,17 @@ class QrCodeResource extends Resource
                                     ->helperText(fn (?QrCode $record): ?string => $record === null
                                         ? static::dynamicUnavailableReason()
                                         : null),
+                                Forms\Components\Select::make('qr_content_type')
+                                    ->label('QR Code Type')
+                                    ->options(QrCode::QR_CONTENT_TYPES)
+                                    ->default('website')
+                                    ->required()
+                                    ->live()
+                                    ->afterStateUpdated(fn (Forms\Set $set) => $set('qr_content_data', []))
+                                    ->disabled(fn ($record) => $record?->type === 'static')
+                                    ->visible(fn ($record) => $record?->type !== 'static'),
                             ]),
                     ]),
-
-                Section::make('QR Code Type')
-                    ->schema([
-                        Forms\Components\Select::make('qr_content_type')
-                            ->label('QR Code Type')
-                            ->options(QrCode::QR_CONTENT_TYPES)
-                            ->default('website')
-                            ->required()
-                            ->live()
-                            ->afterStateUpdated(fn (Forms\Set $set) => $set('qr_content_data', []))
-                            ->disabled(fn ($record) => $record?->type === 'static'),
-                    ])
-                    ->visible(fn ($record) => $record?->type !== 'static'),
 
                 // All content sections - only visible/enabled for dynamic QR codes or new records
                 Section::make('Website Configuration')
@@ -250,107 +247,31 @@ class QrCodeResource extends Resource
                             ($record === null || $record->type === 'dynamic')
                     ),
 
-                // QR Code appearance - only for new records (both types can customize during creation)
-                Section::make('QR Code Appearance')
+                Section::make('Design')
+                    ->description(fn (?QrCode $record): string => $record === null
+                        ? 'Pick a look, then change anything. The preview is exactly the code that will be saved.'
+                        : 'Restyle this code. What it encodes stays as it is, so codes already printed keep working.')
                     ->schema([
-                        Grid::make(2)
-                            ->schema([
-                                Forms\Components\Radio::make('options.style')
-                                    ->label('Style')
-                                    ->options(QrCode::QR_STYLES)
-                                    ->default(QrCode::DEFAULT_STYLE)
-                                    ->required()
-                                    ->view('filament.forms.components.qr-style-picker')
-                                    ->helperText('Shape of the dots and corner squares. All styles scan the same.')
-                                    ->columnSpanFull(),
-
-                                Forms\Components\FileUpload::make('options.logo_path')
-                                    ->label('Centre logo')
-                                    ->image()
-                                    ->live()
-                                    ->disk(config('filesystems.default'))
-                                    ->directory('qr-logos')
-                                    ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp'])
-                                    ->maxSize(2048)
-                                    ->helperText('Optional. A logo covers part of the code, so it forces PNG output and the highest error correction.')
-                                    ->columnSpanFull(),
-
-                                Forms\Components\Select::make('options.format')
-                                    ->label('Image Format')
-                                    ->options([
-                                        'png' => 'PNG',
-                                        'svg' => 'SVG',
-                                        'eps' => 'EPS',
-                                    ])
-                                    ->default('png')
-                                    ->required()
-                                    ->disabled(fn (Forms\Get $get): bool => filled($get('options.logo_path')))
-                                    ->dehydrated()
-                                    ->dehydrateStateUsing(fn ($state, Forms\Get $get) => filled($get('options.logo_path')) ? 'png' : $state)
-                                    ->helperText(fn (Forms\Get $get): ?string => filled($get('options.logo_path'))
-                                        ? 'A centre logo can only be composited onto a PNG.'
-                                        : null),
-
-                                Forms\Components\ColorPicker::make('options.color')
-                                    ->label('QR Code Color')
-                                    ->default('#000000'),
-
-                                Forms\Components\Select::make('options.errorCorrection')
-                                    ->label('Error Correction')
-                                    ->options([
-                                        'L' => 'Low (7%)',
-                                        'M' => 'Medium (15%)',
-                                        'Q' => 'Quartile (25%)',
-                                        'H' => 'High (30%)',
-                                    ])
-                                    ->default('M')
-                                    ->disabled(fn (Forms\Get $get): bool => filled($get('options.logo_path')))
-                                    ->dehydrated()
-                                    ->dehydrateStateUsing(fn ($state, Forms\Get $get) => filled($get('options.logo_path')) ? 'H' : $state)
-                                    ->helperText(fn (Forms\Get $get): ?string => filled($get('options.logo_path'))
-                                        ? 'A covered centre needs the highest error correction to stay scannable.'
-                                        : null),
-
-                                Forms\Components\TextInput::make('options.size')
-                                    ->label('Size (px)')
-                                    ->numeric()
-                                    ->default(300)
-                                    ->minValue(100)
-                                    ->maxValue(2000),
-                            ]),
+                        Forms\Components\Hidden::make('short_url')
+                            ->default(fn (): string => QrCode::reserveShortUrl())
+                            ->rules(['regex:/^[2-9a-km-zA-HJ-NP-Z]{8,20}$/'])
+                            ->dehydrated(fn (?QrCode $record): bool => $record === null),
+                        DesignEditor::make('options.design')
+                            ->hiddenLabel(),
                     ])
-                    ->visible(fn ($record) => $record === null)
-                    ->description('QR code appearance cannot be changed after creation to preserve printed codes.'),
+                    ->columnSpanFull(),
 
-                // Show current settings as read-only for existing records
                 Section::make('Current QR Code Settings')
                     ->schema([
                         Forms\Components\Placeholder::make('qr_type_display')
                             ->label('QR Code Type')
                             ->content(fn ($record) => $record ? QrCode::QR_CONTENT_TYPES[$record->qr_content_type] ?? ucfirst($record->qr_content_type) : ''),
-                        Forms\Components\Placeholder::make('style_display')
-                            ->label('Style')
-                            ->content(fn ($record) => $record ? (QrCode::QR_STYLES[$record->options['style'] ?? QrCode::DEFAULT_STYLE] ?? 'Rounded') : ''),
-                        Forms\Components\Placeholder::make('format_display')
-                            ->label('Format')
-                            ->content(fn ($record) => $record ? strtoupper($record->options['format'] ?? 'PNG') : ''),
-                        Forms\Components\Placeholder::make('color_display')
-                            ->label('Color')
-                            ->content(fn ($record) => $record ? ($record->options['color'] ?? '#000000') : ''),
-                        Forms\Components\Placeholder::make('size_display')
-                            ->label('Size')
-                            ->content(fn ($record) => $record ? ($record->options['size'] ?? '300').'px' : ''),
-                        Forms\Components\Placeholder::make('logo_display')
-                            ->label('Centre Logo')
-                            ->content(fn ($record) => $record && filled($record->options['logo_path'] ?? null)
-                                ? basename($record->options['logo_path'])
-                                : 'None'),
                     ])
                     ->visible(fn ($record) => $record !== null)
                     ->description(
                         fn ($record) => $record?->type === 'static'
-                            ? 'Static QR codes cannot be modified after creation to preserve printed codes.'
-                            : 'QR code appearance cannot be changed after creation to preserve printed codes.'
+                            ? 'What a static QR code encodes cannot be changed after creation to preserve printed codes.'
+                            : 'The Short URL this code encodes cannot be changed after creation to preserve printed codes.'
                     ),
             ]);
     }
@@ -359,9 +280,9 @@ class QrCodeResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('qr_code_image')
+                Tables\Columns\ViewColumn::make('drawing')
                     ->label('QR Code')
-                    ->square(),
+                    ->view('filament.tables.columns.qr-drawing'),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable(),
                 Tables\Columns\BadgeColumn::make('qr_content_type')
@@ -444,7 +365,6 @@ class QrCodeResource extends Resource
         return [
             'index' => Pages\ListQrCodes::route('/'),
             'create' => Pages\CreateQrCode::route('/create'),
-            'create-from-session' => Pages\CreateFromSession::route('/create-from-session'),
             'view' => Pages\ViewQrCode::route('/{record}'),
             'edit' => Pages\EditQrCode::route('/{record}/edit'),
         ];

@@ -34,6 +34,16 @@ class SiteEventFactory extends Factory
     }
 
     /**
+     * Labelled with the page it happened on.
+     */
+    public function onPage(string $page): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'context' => ['page' => $page],
+        ]);
+    }
+
+    /**
      * Aged past the retention window, for the pruning tests.
      */
     public function occurredDaysAgo(int $days): static

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\TrackedEvent;
 use App\Http\Requests\LogSiteEventRequest;
 use App\Models\SiteEvent;
+use App\Support\LandingPages;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
@@ -85,7 +86,7 @@ class ClientEventLoggingTest extends TestCase
         $event = SiteEvent::query()->sole();
 
         $this->assertSame(TrackedEvent::QrDownloaded, $event->name);
-        $this->assertSame(['format' => $format], $event->context);
+        $this->assertSame(['page' => LandingPages::HOME, 'format' => $format], $event->context);
     }
 
     #[DataProvider('clientLoggableEventProvider')]
@@ -205,7 +206,7 @@ class ClientEventLoggingTest extends TestCase
 
         $this->assertStringNotContainsString('a-private-menu', (string) $stored);
         $this->assertStringNotContainsString('free text', (string) $stored);
-        $this->assertSame(['format' => 'png'], SiteEvent::query()->sole()->context);
+        $this->assertSame(['page' => LandingPages::HOME, 'format' => 'png'], SiteEvent::query()->sole()->context);
     }
 
     /**

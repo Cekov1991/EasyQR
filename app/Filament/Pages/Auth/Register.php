@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Auth;
 
 use App\Enums\SignupSource;
+use App\Support\LandingPages;
 use Filament\Pages\Auth\Register as BaseRegister;
 use Illuminate\Database\Eloquent\Model;
 
@@ -31,6 +32,12 @@ use Illuminate\Database\Eloquent\Model;
  * Note that $fillable is not the protection here and cannot be: AppServiceProvider
  * calls Model::unguard(), so mass-assignment guarding is off application-wide. The
  * protection is that this column has exactly one write site, and it re-validates.
+ *
+ * A Landing Page link also carries `?page=`, the Signup Landing Page (ADR-0004).
+ * It is handled the same way, resolved against the published pages at mount and
+ * again at the write, and it is only kept beside a source that resolved: a page
+ * names where a link sat, so without a link we published it describes nothing.
+ * Neither value touches the session, and neither can fail a registration.
  */
 class Register extends BaseRegister
 {
@@ -41,30 +48,65 @@ class Register extends BaseRegister
      */
     public ?string $signupSource = null;
 
+    /**
+     * The resolved Landing Page slug, or null when there was none, it was not
+     * published, or no source resolved beside it.
+     */
+    public ?string $signupLandingPage = null;
+
+    /**
+     * The registration link for one of our own links, on the page it sits on.
+     * The homepage sends no page, since it is not a Landing Page.
+     */
+    public static function linkFrom(SignupSource $source, string $page = LandingPages::HOME): string
+    {
+        return route('filament.admin.auth.register', array_filter([
+            'ref' => $source->value,
+            'page' => $page === LandingPages::HOME ? null : $page,
+        ]));
+    }
+
     public function mount(): void
     {
         parent::mount();
 
-        $this->signupSource = SignupSource::fromRef(request()->query('ref'))?->value;
+        $ref = request()->query('ref');
+
+        $this->signupSource = SignupSource::fromRef(is_string($ref) ? $ref : null)?->value;
+        $this->signupLandingPage = $this->resolveLandingPage($this->signupSource, request()->query('page'));
     }
 
     /**
-     * Registration, with the source written in the same insert.
+     * Registration, with the source and the page written in the same insert.
      *
      * This overrides a one-line parent (`create($data)`) rather than following
      * it with a second save, because `signup_source` is not fillable and never
      * should be: the whole point is that it comes from an allowlisted parameter
      * and not from whatever the form posted. `make()` still honours $fillable
-     * for the form data, so the column is set beside that rather than through it.
+     * for the form data, so the columns are set beside that rather than through it.
      */
     protected function handleRegistration(array $data): Model
     {
         $user = $this->getUserModel()::make($data);
 
         $user->signup_source = SignupSource::fromRef($this->signupSource);
+        $user->signup_landing_page = $this->resolveLandingPage($this->signupSource, $this->signupLandingPage);
 
         $user->save();
 
         return $user;
+    }
+
+    /**
+     * The page, if it is one a visitor can reach and the source beside it is
+     * one we published.
+     */
+    private function resolveLandingPage(?string $source, mixed $page): ?string
+    {
+        if (SignupSource::fromRef($source) === null || ! is_string($page)) {
+            return null;
+        }
+
+        return LandingPages::publishedSlug($page);
     }
 }

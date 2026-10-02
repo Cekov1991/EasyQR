@@ -76,4 +76,17 @@ class EventDisclosureTest extends TestCase
             ->assertOk()
             ->assertDontSee('We run no analytics');
     }
+
+    /**
+     * Counts now say which of our pages they happened on. The policy has to
+     * say so, and has to say that a page load alone is not counted, which is
+     * what keeps the promise not to record which pages you visit true.
+     */
+    public function test_the_policy_says_a_count_may_name_the_page_it_happened_on(): void
+    {
+        $this->get('/privacy-policy')
+            ->assertOk()
+            ->assertSee('which of our own pages it happened on')
+            ->assertSee('loading a page is never counted by itself');
+    }
 }

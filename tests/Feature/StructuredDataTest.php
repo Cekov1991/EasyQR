@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\Plan;
+use App\Support\Faq;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
@@ -123,6 +124,26 @@ class StructuredDataTest extends TestCase
             ->assertOk()
             ->assertSee('<link rel="canonical" href="'.url('/pricing').'">', false)
             ->assertDontSee('utm_source', false);
+    }
+
+    /**
+     * forFaq() was generalised so Landing Pages could mark up their own
+     * questions. The FAQ page's markup must read exactly as it did: every
+     * question anchored to /faq, under the page's own name.
+     */
+    public function test_the_faq_page_markup_is_anchored_to_the_faq_page(): void
+    {
+        $faq = $this->node($this->graphFrom($this->get('/faq')), 'FAQPage');
+
+        $this->assertNotNull($faq);
+        $this->assertSame(route('faq').'#faq', $faq['@id']);
+        $this->assertSame(route('faq'), $faq['url']);
+        $this->assertSame('Frequently asked questions', $faq['name']);
+        $this->assertSame(['@id' => url('/#organization')], $faq['publisher']);
+        $this->assertSame(
+            array_map(fn (array $entry): string => route('faq').'#'.$entry['id'], Faq::questions()),
+            array_column($faq['mainEntity'], '@id'),
+        );
     }
 
     /**

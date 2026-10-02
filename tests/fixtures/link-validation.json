@@ -1,0 +1,238 @@
+{
+    "rules": {
+        "domains": [
+            "bit.ly",
+            "tinyurl.com",
+            "short.link",
+            "ow.ly",
+            "t.co",
+            "goo.gl",
+            "tiny.cc",
+            "is.gd",
+            "buff.ly",
+            "rebrand.ly",
+            "shorturl.at",
+            "free-stuff",
+            "click-here",
+            "urgent-action"
+        ],
+        "keywords": [
+            "phishing",
+            "scam",
+            "malware",
+            "virus",
+            "hack",
+            "free-money",
+            "click-here-now",
+            "urgent-action",
+            "download-now",
+            "claim-prize",
+            "congratulations-winner"
+        ],
+        "extensions": [
+            ".exe",
+            ".bat",
+            ".cmd",
+            ".pif",
+            ".scr",
+            ".vbs"
+        ]
+    },
+    "cases": [
+        {
+            "url": "https://example.com",
+            "valid": true,
+            "message": null
+        },
+        {
+            "url": "https://example.com/menu?table=4&lang=en#top",
+            "valid": true,
+            "message": null
+        },
+        {
+            "url": "https://sub.example.co.uk/a/b",
+            "valid": true,
+            "message": null
+        },
+        {
+            "url": "https://user:pw@example.com/x",
+            "valid": true,
+            "message": null
+        },
+        {
+            "url": "https://example.com:8443/x",
+            "valid": true,
+            "message": null
+        },
+        {
+            "url": "https://EXAMPLE.com/Menu",
+            "valid": true,
+            "message": null
+        },
+        {
+            "url": "http://example.com",
+            "valid": false,
+            "message": "For security reasons, only HTTPS URLs are allowed. Please use https:// instead of http://"
+        },
+        {
+            "url": "HTTPS://example.com",
+            "valid": false,
+            "message": "For security reasons, only HTTPS URLs are allowed. Please use https:// instead of http://"
+        },
+        {
+            "url": "http://localhost:8000/x",
+            "valid": true,
+            "message": null
+        },
+        {
+            "url": "http://127.0.0.1/a",
+            "valid": true,
+            "message": null
+        },
+        {
+            "url": "http://localhost",
+            "valid": true,
+            "message": null
+        },
+        {
+            "url": "ftp://example.com/file",
+            "valid": false,
+            "message": "For security reasons, only HTTPS URLs are allowed. Please use https:// instead of http://"
+        },
+        {
+            "url": "example.com",
+            "valid": false,
+            "message": "Invalid URL format. Please enter a complete URL (e.g., https://example.com)"
+        },
+        {
+            "url": "javascript:alert(1)",
+            "valid": false,
+            "message": "Invalid URL format. Please enter a complete URL (e.g., https://example.com)"
+        },
+        {
+            "url": "https://",
+            "valid": false,
+            "message": "Invalid URL format. Please enter a complete URL (e.g., https://example.com)"
+        },
+        {
+            "url": "https:///path",
+            "valid": false,
+            "message": "Invalid URL format. Please enter a complete URL (e.g., https://example.com)"
+        },
+        {
+            "url": "mailto:hi@example.com",
+            "valid": false,
+            "message": "Invalid URL format. Please enter a complete URL (e.g., https://example.com)"
+        },
+        {
+            "url": "hello world",
+            "valid": false,
+            "message": "Invalid URL format. Please enter a complete URL (e.g., https://example.com)"
+        },
+        {
+            "url": "0",
+            "valid": false,
+            "message": "Please enter a valid URL."
+        },
+        {
+            "url": "https://bit.ly/abc",
+            "valid": false,
+            "message": "URL shortening services like 'bit.ly' are not allowed. Please use the direct URL to your content."
+        },
+        {
+            "url": "https://sub.t.co/x",
+            "valid": false,
+            "message": "URL shortening services like 't.co' are not allowed. Please use the direct URL to your content."
+        },
+        {
+            "url": "https://TINYURL.com/y",
+            "valid": false,
+            "message": "URL shortening services like 'tinyurl.com' are not allowed. Please use the direct URL to your content."
+        },
+        {
+            "url": "https://my-free-stuff.com",
+            "valid": false,
+            "message": "URL shortening services like 'free-stuff' are not allowed. Please use the direct URL to your content."
+        },
+        {
+            "url": "https://click-here.example.com",
+            "valid": false,
+            "message": "URL shortening services like 'click-here' are not allowed. Please use the direct URL to your content."
+        },
+        {
+            "url": "https://example.com/scam",
+            "valid": false,
+            "message": "URLs containing 'scam' are not permitted for security reasons. Please use a different URL."
+        },
+        {
+            "url": "https://example.com/Phishing-guide",
+            "valid": false,
+            "message": "URLs containing 'phishing' are not permitted for security reasons. Please use a different URL."
+        },
+        {
+            "url": "https://hackernews.example.com",
+            "valid": false,
+            "message": "URLs containing 'hack' are not permitted for security reasons. Please use a different URL."
+        },
+        {
+            "url": "https://example.com/congratulations-winner",
+            "valid": false,
+            "message": "URLs containing 'congratulations-winner' are not permitted for security reasons. Please use a different URL."
+        },
+        {
+            "url": "https://example.com/download-now",
+            "valid": false,
+            "message": "URLs containing 'download-now' are not permitted for security reasons. Please use a different URL."
+        },
+        {
+            "url": "https://example.com/setup.exe",
+            "valid": false,
+            "message": "Executable files (.exe) are not allowed for security reasons. Please link to a webpage instead."
+        },
+        {
+            "url": "https://example.com/setup.EXE",
+            "valid": false,
+            "message": "Executable files (.exe) are not allowed for security reasons. Please link to a webpage instead."
+        },
+        {
+            "url": "https://example.com/run.bat?x=1",
+            "valid": false,
+            "message": "Executable files (.bat) are not allowed for security reasons. Please link to a webpage instead."
+        },
+        {
+            "url": "https://example.com/a.exe/page",
+            "valid": true,
+            "message": null
+        },
+        {
+            "url": "https://example.com/?file=a.exe",
+            "valid": true,
+            "message": null
+        },
+        {
+            "url": "https://192.168.0.1/a",
+            "valid": false,
+            "message": "Direct IP addresses are not allowed for security reasons. Please use a proper domain name."
+        },
+        {
+            "url": "https://8.8.8.8",
+            "valid": false,
+            "message": "Direct IP addresses are not allowed for security reasons. Please use a proper domain name."
+        },
+        {
+            "url": "https://[::1]/x",
+            "valid": true,
+            "message": null
+        },
+        {
+            "url": "https://127.0.0.1/x",
+            "valid": false,
+            "message": "Direct IP addresses are not allowed for security reasons. Please use a proper domain name."
+        },
+        {
+            "url": "http://10.0.0.1/a",
+            "valid": false,
+            "message": "For security reasons, only HTTPS URLs are allowed. Please use https:// instead of http://"
+        }
+    ]
+}

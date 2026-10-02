@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\Plan;
+use App\Support\LandingPages;
 use App\Support\PublicPages;
 use App\Support\SubscriptionPrice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -151,6 +152,24 @@ class CrawlerDiscoveryTest extends TestCase
                 $this->assertFalse(
                     str_starts_with($path, $closed),
                     "The sitemap lists {$page['url']}, which robots.txt disallows via {$closed}."
+                );
+            }
+        }
+    }
+
+    /**
+     * robots.txt matches by prefix, so a closed path can swallow a slug that
+     * merely starts with it: a closed `/admin` must not close `/administrators-guide`.
+     * Checked against every page in the registry, published or not, so a
+     * draft cannot be written into a slug no crawler will ever fetch.
+     */
+    public function test_robots_closes_no_landing_page(): void
+    {
+        foreach (LandingPages::all() as $page) {
+            foreach (PublicPages::closedPaths() as $closed) {
+                $this->assertFalse(
+                    str_starts_with('/'.$page->slug, $closed),
+                    "robots.txt closes /{$page->slug} via {$closed}."
                 );
             }
         }

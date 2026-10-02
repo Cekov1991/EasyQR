@@ -27,9 +27,10 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
      * The attributes that are mass assignable.
      *
      * Entitlement columns are deliberately absent: they are billing state and
-     * must never be settable from request input. `signup_source` is absent for
-     * the same reason: it is derived from an allowlisted query parameter, not
-     * from anything the registration form posts.
+     * must never be settable from request input. `signup_source` and
+     * `signup_landing_page` are absent for the same reason: they are derived
+     * from allowlisted query parameters, not from anything the registration
+     * form posts.
      *
      * Be aware that this list currently protects nothing. AppServiceProvider
      * calls Model::unguard() in boot(), which disables mass-assignment guarding

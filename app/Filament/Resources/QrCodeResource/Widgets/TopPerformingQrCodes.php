@@ -3,15 +3,16 @@
 namespace App\Filament\Resources\QrCodeResource\Widgets;
 
 use App\Models\QrCode;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ViewColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\ImageColumn;
 use Illuminate\Support\Facades\Auth;
 
 class TopPerformingQrCodes extends BaseWidget
 {
     protected static ?int $sort = 2;
+
     protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table
@@ -24,9 +25,9 @@ class TopPerformingQrCodes extends BaseWidget
                     ->limit(5)
             )
             ->columns([
-                ImageColumn::make('qr_code_image')
-                    ->square()
-                    ->size(40),
+                ViewColumn::make('drawing')
+                    ->label('QR Code')
+                    ->view('filament.tables.columns.qr-drawing'),
                 TextColumn::make('name')
                     ->searchable()
                     ->sortable(),

@@ -18,8 +18,29 @@ _Avoid_: trackable QR, editable QR (both are consequences, not the definition)
 The 8-character public identifier in a Dynamic QR Code's encoded URL, permanent for the life of the code because the printed image cannot be reissued.
 _Avoid_: slug, code, token
 
+**Design**:
+How one QR Code looks — the shape of its modules, corners and eyes, its colours, its frame and its logo. Owned by that code alone, and never changes what the code encodes or whether it resolves.
+_Avoid_: style, theme, template
+
+**Look**:
+A named starting Design (Rounded, Ink, Bloom, Soft). Choosing one copies its settings into the code's Design; the code keeps no link to the Look, so changing a Look never touches a code already made — a printed image cannot be reissued.
+_Avoid_: preset, style
+
 **Scan**:
 One resolution of a Dynamic QR Code through `/q/{shortUrl}`, logged with device, browser, and geolocation. Static QR Codes produce no Scans by construction.
+
+### Site
+
+**Landing Page**:
+A public page written for one search a stranger types — a problem ("QR code stopped working") or a use case ("QR code for a restaurant menu") — that lets them make a Static QR Code on the spot and explains when their case needs a Dynamic one. Exists only once a human has read and published it.
+_Avoid_: SEO page, LP (in prose; `lp-` survives only as a ref prefix if one is ever needed)
+
+**Signup Source**:
+Which of our own links a User registered through — the offer, the quiet inline link, or a Landing Page's call to action. Recorded once, at registration, from a closed set; anything we did not publish reads as unknown. Says nothing about which page the link sat on.
+_Avoid_: referrer (that is the browser's header), campaign, attribution (too broad — this is one fact, not a model)
+
+**Signup Landing Page**:
+The Landing Page a User's Signup Source link sat on, or none when they registered from anywhere else. Last click only: a visitor who leaves a Landing Page before registering is not credited to it.
 
 ### People
 
@@ -80,6 +101,7 @@ _Avoid_: expired (that word belonged to the retired per-code model), suspended, 
 - A **Dynamic QR Code** has many **Scans**; a **Static QR Code** has none
 - A **Checkout** belongs to one **User** and is created from one **Plan**'s **Payment Link**
 - An **Entitlement** belongs to a **User**, never to a **QR Code**
+- A **User** has at most one **Signup Source** and at most one **Signup Landing Page**; a Signup Landing Page never appears without the Signup Source that was clicked on it
 
 ## Example dialogue
 

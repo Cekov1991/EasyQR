@@ -39,6 +39,14 @@ class AssetVersioningTest extends TestCase
         Asset::forgetVersions();
     }
 
+    public function test_the_vendored_qr_scripts_are_versioned_like_the_stylesheet(): void
+    {
+        foreach (['js/qrcode-generator.js', 'js/qr-renderer.js', 'js/qr-link.js', 'js/qr-design-controls.js', 'css/qr-design-controls.css'] as $script) {
+            $this->assertFileExists(public_path($script));
+            $this->assertMatchesRegularExpression('/\?v=[0-9a-f]{8}$/', Asset::versioned($script));
+        }
+    }
+
     public function test_a_real_file_gets_a_version_appended(): void
     {
         $this->assertMatchesRegularExpression(

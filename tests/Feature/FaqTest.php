@@ -38,6 +38,18 @@ class FaqTest extends TestCase
      * the anchors are hand-written rather than slugged off the question. Two
      * questions sharing one would send half those links to the wrong answer.
      */
+    /**
+     * We never switch a static code off, but it still opens a page someone
+     * else may take down, so no answer promises it works for ever.
+     */
+    public function test_a_lapsed_account_leaves_static_codes_working_as_long_as_their_page_does(): void
+    {
+        $answer = Faq::find('stop-paying')['answer'];
+
+        $this->assertStringContainsString('as long as the page they point to', $answer);
+        $this->assertStringNotContainsString('permanently', $answer);
+    }
+
     public function test_every_question_has_its_own_anchor(): void
     {
         $ids = array_column(Faq::questions(), 'id');

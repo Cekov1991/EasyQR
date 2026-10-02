@@ -3,12 +3,18 @@
 namespace App\Filament\Resources\QrCodeResource\Pages;
 
 use App\Filament\Resources\QrCodeResource;
+use App\Filament\Resources\QrCodeResource\Concerns\PreviewsEncodedContent;
+use App\Filament\Resources\QrCodeResource\Concerns\StoresDesignLogo;
+use App\Models\QrCode;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Auth;
 
 class CreateQrCode extends CreateRecord
 {
+    use PreviewsEncodedContent;
+    use StoresDesignLogo;
+
     protected static string $resource = QrCodeResource::class;
 
     /**
@@ -22,6 +28,8 @@ class CreateQrCode extends CreateRecord
         $user = Auth::user();
 
         if ($user->quota()->canCreate($type)) {
+            $this->replaceTakenShortUrl();
+
             return;
         }
 
@@ -43,6 +51,32 @@ class CreateQrCode extends CreateRecord
             ->danger()
             ->title($title)
             ->body($body)
+            ->persistent()
+            ->send();
+
+        $this->halt();
+    }
+
+    /**
+     * The Short URL was reserved when the form opened, so it can in principle
+     * have been taken since. A Dynamic code's pattern is the Short URL, so the
+     * Owner is shown the new one and saves again rather than being given a code
+     * they did not approve.
+     */
+    protected function replaceTakenShortUrl(): void
+    {
+        $shortUrl = $this->data['short_url'] ?? null;
+
+        if (! is_string($shortUrl) || ! QrCode::query()->where('short_url', $shortUrl)->exists()) {
+            return;
+        }
+
+        $this->data['short_url'] = QrCode::reserveShortUrl();
+
+        Notification::make()
+            ->warning()
+            ->title('Your code\'s link was taken')
+            ->body('Someone else got that link first, so we picked a new one. Check the preview and save again.')
             ->persistent()
             ->send();
 

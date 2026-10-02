@@ -48,7 +48,8 @@
                 Which part of our site sent you to the registration form, if you arrived by following one of
                 our own links — for example the upgrade offer shown after you download a free QR code. This is
                 a single short label chosen from a fixed list we publish, such as
-                <code>static-offer</code>. It records where the link was, never anything about you, and it is
+                <code>static-offer</code>. If that link was on one of our guides, we also note which guide, by
+                the name in its address. It records where the link was, never anything about you, and it is
                 blank for most accounts. We use it only to understand which parts of the site people find
                 useful, and it is deleted with your account.
             </li>
@@ -81,8 +82,9 @@
             free QR codes were generated today, for instance, or how many people opened a checkout. A count
             records that something happened and never who it happened to: it carries no name, no account, no
             IP address, no cookie and nothing you typed, and the address you put into a free QR code is never
-            part of it. These counts cannot be traced back to you, connected to one another, or used to
-            recognise you on a later visit. We keep them for
+            part of it. A count may note which of our own pages it happened on, such as the homepage or one
+            of our guides, but loading a page is never counted by itself. These counts cannot be traced back
+            to you, connected to one another, or used to recognise you on a later visit. We keep them for
             <strong>{{ config('site.event_retention_days') }} days</strong> and use them to understand
             whether the site works, not who is using it.
         </p>
