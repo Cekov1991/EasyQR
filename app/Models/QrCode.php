@@ -139,7 +139,6 @@ class QrCode extends Model
                 throw new \Exception('Static QR codes cannot be updated after creation to preserve printed codes.');
             }
 
-            // A logo the Design no longer references has nothing left to be for.
             if ($qrCode->isDirty('options')) {
                 $replaced = static::logoPathOf($qrCode->getOriginal('options') ?? []);
 
