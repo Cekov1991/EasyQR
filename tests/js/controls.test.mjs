@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { controls, design, drawn, renderer } from './support.mjs';
+import { controls, design, drawn, options, renderer } from './support.mjs';
 
 describe('colours', () => {
     it('accepts a hex colour with or without the hash, in any case, and short or long', () => {
@@ -46,8 +46,23 @@ describe('shapes and frame', () => {
         assert.equal(start.dot, 'fluid');
     });
 
-    it('limits the frame text to 18 characters', () => {
-        assert.equal(controls.setFrameText(design(), 'x'.repeat(40)).frameText.length, 18);
+    it('offers exactly the values the data file lists', () => {
+        for (const [setting, { values }] of Object.entries(options.options)) {
+            assert.deepEqual([...controls.SETS[setting]], Object.keys(values), setting);
+        }
+        assert.deepEqual([...controls.COLOURS], Object.keys(options.colours));
+    });
+
+    it('accepts every value the data file lists', () => {
+        for (const setting of ['dot', 'corner', 'eye', 'frame']) {
+            for (const value of Object.keys(options.options[setting].values)) {
+                assert.equal(controls.setOption(design(), setting, value)[setting], value);
+            }
+        }
+    });
+
+    it('limits the frame text to the length the data file sets', () => {
+        assert.equal(controls.setFrameText(design(), 'x'.repeat(40)).frameText.length, options.frameText.max);
         assert.equal(controls.setFrameText(design(), 'HELLO').frameText, 'HELLO');
     });
 });
@@ -173,5 +188,23 @@ describe('a redrawn design from the controls still renders', () => {
         const state = controls.setLogoSetting(controls.addLogo(controls.setOption(design(), 'frame', 'label')), 'shape', 'circle');
 
         assert.ok(drawn('https://example.com', state).svg.includes('<svg'));
+    });
+});
+
+describe('the logo picture', () => {
+    const file = (type, size = 1000) => ({ type, size });
+
+    it('refuses SVG files', async () => {
+        await assert.rejects(controls.readLogo(file('image/svg+xml')), /PNG, JPG or WebP/);
+        assert.ok(!controls.LOGO_FILE_TYPES.includes('image/svg+xml'));
+    });
+
+    it('accepts PNG, JPEG and WebP only', () => {
+        assert.deepEqual([...controls.LOGO_FILE_TYPES].sort(), ['image/jpeg', 'image/png', 'image/webp']);
+    });
+
+    it('refuses anything else, and a picture over the size limit', async () => {
+        await assert.rejects(controls.readLogo(file('application/pdf')), /PNG, JPG or WebP/);
+        await assert.rejects(controls.readLogo(file('image/png', options.logo.maxBytes + 1)), /5 MB/);
     });
 });

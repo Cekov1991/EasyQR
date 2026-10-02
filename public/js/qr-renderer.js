@@ -4,32 +4,59 @@
  * downloads a code draws it through here, so the preview and the printed code
  * cannot disagree.
  *
- * Needs the global `qrcode` from qrcode-generator.js. Classic script, no build
+ * Needs the globals `qrcode` (qrcode-generator.js) and `QrDesignOptions` (qr-design-options.json,
+ * the one place the option sets, labels and limits are defined), and uses `QrFrameFont`
+ * (qr-frame-font.js) when it is there. Classic script, no build
  * step: it also loads in Node, which is how `npm test` proves the output scans.
  */
 (function (root) {
     'use strict';
 
+    const DATA = root.QrDesignOptions;
+
+    if (!DATA) {
+        throw new Error('qr-design-options.json must be loaded as QrDesignOptions before the renderer');
+    }
+
     const UNIT = 10;
     const QUIET_MODULES = 4;
-    const MAX_FRAME_TEXT = 18;
+    const MAX_FRAME_TEXT = DATA.frameText.max;
     const BLOCK_CONTRAST = 3;
     const WARN_CONTRAST = 4;
-    const MAX_LOGO_COVERAGE = 25;
+    const MAX_LOGO_COVERAGE = DATA.logo.hiddenBox;
+    const FRAME_FONT_FAMILY = 'EQ Manrope';
+
     const LOGO_LIMITS = Object.freeze({
-        size: Object.freeze({ min: 10, max: 25 }),
-        padding: Object.freeze({ min: 0, max: 5 }),
+        size: Object.freeze({ min: DATA.logo.size.min, max: DATA.logo.size.max }),
+        padding: Object.freeze({ min: DATA.logo.padding.min, max: DATA.logo.padding.max }),
         hiddenBox: MAX_LOGO_COVERAGE,
     });
 
-    const LOOKS = Object.freeze({
-        rounded: Object.freeze({ label: 'Rounded', dot: 'fluid', corner: 'rounded', eye: 'dot', codeColor: '#171b19', eyeColor: '#348FAD', bgColor: '#ffffff' }),
-        ink: Object.freeze({ label: 'Ink', dot: 'square', corner: 'square', eye: 'square', codeColor: '#000000', eyeColor: '#000000', bgColor: '#ffffff' }),
-        bloom: Object.freeze({ label: 'Bloom', dot: 'dots', corner: 'circle', eye: 'dot', codeColor: '#2C7790', eyeColor: '#3A9FC0', bgColor: '#F4FAFC' }),
-        soft: Object.freeze({ label: 'Soft', dot: 'rounded', corner: 'rounded', eye: 'rounded', codeColor: '#0A0F24', eyeColor: '#348FAD', bgColor: '#D4EBF2' }),
+    /** The logo a visitor gets when they add one: scans by construction, hidden box well under the limit. */
+    const DEFAULT_LOGO = Object.freeze({
+        ...DATA.logo.defaults,
+        size: DATA.logo.size.default,
+        padding: DATA.logo.padding.default,
     });
 
+    /** Each closed set of choices with its labels, from the one data file the Blade controls read too. */
+    const OPTIONS = deepFreeze(DATA.options);
+
+    /** The colour swatches offered for the code, the eyes and the background. */
+    const SWATCHES = deepFreeze(DATA.colours);
+
+    const LOOKS = deepFreeze(DATA.looks);
+
     const LOOK_KEYS = ['dot', 'corner', 'eye', 'codeColor', 'eyeColor', 'bgColor'];
+
+    function deepFreeze(value) {
+        if (value && typeof value === 'object') {
+            Object.values(value).forEach(deepFreeze);
+            Object.freeze(value);
+        }
+
+        return value;
+    }
 
     let drawings = 0;
 
@@ -44,7 +71,7 @@
             version: 1,
             ...lookSettings('rounded'),
             frame: 'none',
-            frameText: 'SCAN ME',
+            frameText: DATA.frameText.default,
             logo: null,
         };
     }
@@ -255,7 +282,7 @@
 
     function frameMarkup(design, code, size) {
         const text = escapeXml(String(design.frameText ?? '').slice(0, MAX_FRAME_TEXT));
-        const font = 'font-family="Manrope, Arial, sans-serif" font-weight="800" letter-spacing="2"';
+        const font = `font-family="'${FRAME_FONT_FAMILY}', Manrope, Arial, sans-serif" font-weight="800" letter-spacing="2"`;
         const u = UNIT;
         let width = size;
         let height = size;
@@ -283,7 +310,24 @@
                 + `<text x="${width / 2}" y="${size + pad + 7 * u}" text-anchor="middle" ${font} font-size="${4 * u}" fill="${design.bgColor}">${text}</text>`;
         }
 
-        return { width, height, body };
+        const hasText = design.frame === 'label' || design.frame === 'badge';
+
+        return { width, height, body: hasText ? frameFont() + body : body };
+    }
+
+    /**
+     * The font the frame text needs, inside the SVG. A PNG made by drawing the SVG as an
+     * <img> cannot load web fonts, and a saved SVG cannot count on the viewer having one,
+     * so the letters travel with the file.
+     */
+    function frameFont() {
+        const data = root.QrFrameFont;
+
+        if (!data) {
+            return '';
+        }
+
+        return `<style>@font-face{font-family:'${FRAME_FONT_FAMILY}';font-weight:800;font-style:normal;src:url(${data}) format('woff2');}</style>`;
     }
 
     /**
@@ -344,5 +388,8 @@
         };
     }
 
-    root.QrRenderer = Object.freeze({ render, check, contrast, luminance, logoCoverage, maxLogoSize, clampLogo, LOGO_LIMITS, defaultDesign, applyLook, lookOf, LOOKS });
+    root.QrRenderer = Object.freeze({
+        render, check, contrast, luminance, logoCoverage, maxLogoSize, clampLogo, roundedRect, circle,
+        LOGO_LIMITS, DEFAULT_LOGO, OPTIONS, SWATCHES, MAX_FRAME_TEXT, defaultDesign, applyLook, lookOf, LOOKS,
+    });
 })(globalThis);

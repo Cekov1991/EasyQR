@@ -1,0 +1,55 @@
+{
+    "version": 1,
+    "options": {
+        "dot": {
+            "label": "Modules",
+            "values": { "square": "Square", "rounded": "Rounded", "dots": "Dots", "fluid": "Fluid" }
+        },
+        "corner": {
+            "label": "Corners",
+            "values": { "square": "Square", "rounded": "Rounded", "circle": "Circle" }
+        },
+        "eye": {
+            "label": "Eye",
+            "values": { "square": "Square", "rounded": "Rounded", "dot": "Dot" }
+        },
+        "frame": {
+            "label": "Frame",
+            "values": { "none": "None", "label": "Label", "border": "Border", "badge": "Badge" }
+        },
+        "logoShape": {
+            "label": "Logo shape",
+            "values": { "square": "Square", "rounded": "Rounded", "circle": "Circle" }
+        }
+    },
+    "colours": {
+        "codeColor": {
+            "label": "Code colour",
+            "swatches": ["#171b19", "#000000", "#1d3b2f", "#233a83", "#6b2f1f", "#0A0F24", "#2C7790"]
+        },
+        "eyeColor": {
+            "label": "Eye colour",
+            "swatches": ["#348FAD", "#171b19", "#3fbf5f", "#233a83", "#a8541f", "#d92d20", "#000000"]
+        },
+        "bgColor": {
+            "label": "Background colour",
+            "swatches": ["#ffffff", "#F4FAFC", "#fdf6ec", "#f1f1f8", "#D4EBF2", "#111111", "#0A0F24"]
+        }
+    },
+    "frameText": { "max": 18, "default": "SCAN ME" },
+    "logo": {
+        "size": { "min": 10, "max": 25, "default": 20, "step": 1 },
+        "padding": { "min": 0, "max": 5, "default": 2, "step": 0.5 },
+        "hiddenBox": 25,
+        "defaults": { "shape": "rounded", "backing": true, "clearSpace": true },
+        "fileTypes": ["image/png", "image/jpeg", "image/webp"],
+        "maxBytes": 5242880,
+        "maxPixels": 512
+    },
+    "looks": {
+        "rounded": { "label": "Rounded", "dot": "fluid", "corner": "rounded", "eye": "dot", "codeColor": "#171b19", "eyeColor": "#348FAD", "bgColor": "#ffffff" },
+        "ink": { "label": "Ink", "dot": "square", "corner": "square", "eye": "square", "codeColor": "#000000", "eyeColor": "#000000", "bgColor": "#ffffff" },
+        "bloom": { "label": "Bloom", "dot": "dots", "corner": "circle", "eye": "dot", "codeColor": "#2C7790", "eyeColor": "#3A9FC0", "bgColor": "#F4FAFC" },
+        "soft": { "label": "Soft", "dot": "rounded", "corner": "rounded", "eye": "rounded", "codeColor": "#0A0F24", "eyeColor": "#348FAD", "bgColor": "#D4EBF2" }
+    }
+}

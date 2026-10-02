@@ -13,20 +13,16 @@
 
     const renderer = root.QrRenderer;
 
-    const SETS = Object.freeze({
-        dot: ['square', 'rounded', 'dots', 'fluid'],
-        corner: ['square', 'rounded', 'circle'],
-        eye: ['square', 'rounded', 'dot'],
-        frame: ['none', 'label', 'border', 'badge'],
-        logoShape: ['square', 'rounded', 'circle'],
-    });
+    const SETS = Object.freeze(Object.fromEntries(
+        Object.entries(renderer.OPTIONS).map(([setting, { values }]) => [setting, Object.freeze(Object.keys(values))]),
+    ));
 
-    const COLOURS = ['codeColor', 'eyeColor', 'bgColor'];
-    const MAX_FRAME_TEXT = 18;
-    const LOGO_FILE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'];
-    const LOGO_MAX_BYTES = 5 * 1024 * 1024;
-    const LOGO_MAX_PIXELS = 512;
-    const DEFAULT_LOGO = Object.freeze({ shape: 'rounded', size: 20, padding: 2, backing: true, clearSpace: true });
+    const COLOURS = Object.freeze(Object.keys(renderer.SWATCHES));
+    const MAX_FRAME_TEXT = renderer.MAX_FRAME_TEXT;
+    const LOGO_FILE_TYPES = Object.freeze([...root.QrDesignOptions.logo.fileTypes]);
+    const LOGO_MAX_BYTES = root.QrDesignOptions.logo.maxBytes;
+    const LOGO_MAX_PIXELS = root.QrDesignOptions.logo.maxPixels;
+    const DEFAULT_LOGO = renderer.DEFAULT_LOGO;
 
     function normaliseHex(value) {
         const text = String(value ?? '').trim().replace(/^#/, '').toLowerCase();
@@ -124,9 +120,7 @@
 
     /* ------------------------------------------------------------ the DOM -- */
 
-    function rounded(x, y, w, h, tl, tr = tl, br = tl, bl = tl) {
-        return `M${x + tl} ${y}H${x + w - tr}A${tr} ${tr} 0 0 1 ${x + w} ${y + tr}V${y + h - br}A${br} ${br} 0 0 1 ${x + w - br} ${y + h}H${x + bl}A${bl} ${bl} 0 0 1 ${x} ${y + h - bl}V${y + tl}A${tl} ${tl} 0 0 1 ${x + tl} ${y}Z`;
-    }
+    const rounded = renderer.roundedRect;
 
     /** A small picture for an option button, drawn with the same primitives as the code. */
     function icon(setting, value) {
@@ -187,7 +181,7 @@
         });
     }
 
-    /** Scales a picture down so a big photo does not make every redraw heavy. SVG is left as it is. */
+    /** Scales a picture down so a big photo does not make every redraw heavy. */
     function shrink(dataUrl) {
         return new Promise((resolve) => {
             const image = new Image();
@@ -220,7 +214,7 @@
      */
     async function readLogo(file) {
         if (!LOGO_FILE_TYPES.includes(file.type)) {
-            throw new Error('Choose a PNG, JPG, WebP or SVG picture.');
+            throw new Error('Choose a PNG, JPG or WebP picture.');
         }
 
         if (file.size > LOGO_MAX_BYTES) {
@@ -235,7 +229,7 @@
             throw new Error('That file could not be read. Try another.');
         }
 
-        return file.type === 'image/svg+xml' ? dataUrl : shrink(dataUrl);
+        return shrink(dataUrl);
     }
 
     /**
@@ -423,7 +417,7 @@
     }
 
     root.QrDesignControls = Object.freeze({
-        SETS, COLOURS, MAX_FRAME_TEXT, normaliseHex, setOption, setColour, setFrameText, addLogo, removeLogo,
+        SETS, COLOURS, MAX_FRAME_TEXT, LOGO_FILE_TYPES, normaliseHex, setOption, setColour, setFrameText, addLogo, removeLogo,
         setLogoSetting, logoLimits, lookName, verdict, readLogo, icon, mount,
     });
 })(globalThis);

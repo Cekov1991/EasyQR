@@ -177,7 +177,9 @@
 @endguest
 
 @pushOnce('scripts')
+    <x-qr-design-controls.data />
     <script src="{{ \App\Support\Asset::versioned('js/qrcode-generator.js') }}"></script>
+    <script src="{{ \App\Support\Asset::versioned('js/qr-frame-font.js') }}"></script>
     <script src="{{ \App\Support\Asset::versioned('js/qr-renderer.js') }}"></script>
     <script src="{{ \App\Support\Asset::versioned('js/qr-design-controls.js') }}"></script>
     <script src="{{ \App\Support\Asset::versioned('js/qr-link.js') }}"></script>

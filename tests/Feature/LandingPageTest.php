@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\Plan;
+use App\Support\Asset;
 use App\Support\Faq;
 use App\Support\LandingPage;
 use App\Support\LandingPages;
@@ -519,7 +520,8 @@ class LandingPageTest extends TestCase
             return $matches[1];
         })($this->get($uri)->assertOk()->getContent());
 
-        $this->assertCount(4, $scripts('/'));
+        $this->assertContains(Asset::versioned('js/qr-renderer.js'), $scripts('/'));
+        $this->assertContains(Asset::versioned('js/qr-frame-font.js'), $scripts('/'));
         $this->assertSame($scripts('/'), $scripts('/'.self::HUB));
     }
 

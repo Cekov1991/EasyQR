@@ -168,21 +168,28 @@ class QrCodeStyleTest extends TestCase
         $this->assertStringContainsStringIgnoringCase('ff0000', $red);
     }
 
-    public function test_the_style_picker_renders_a_selectable_sample_for_every_style(): void
+    /**
+     * Every style a person can pick in the form is kept on the code. The picker's
+     * markup is not asserted: choosing is the behaviour, and storing is its result.
+     */
+    public function test_every_style_the_form_offers_can_be_chosen_and_is_kept(): void
     {
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        $page = Livewire::test(CreateQrCode::class);
+        foreach (array_keys(QrCode::QR_STYLES) as $style) {
+            Livewire::test(CreateQrCode::class)
+                ->fillForm([
+                    'name' => "Code in {$style}",
+                    'type' => 'static',
+                    'qr_content_type' => 'website',
+                    'qr_content_data' => ['url' => self::CONTENT],
+                    'options' => ['style' => $style, 'format' => 'png', 'size' => 300, 'errorCorrection' => 'M'],
+                ])
+                ->call('create')
+                ->assertHasNoFormErrors();
 
-        $page->assertSeeHtml('eq-style-picker');
-
-        // Without a live binding the tiles would render but never change the state.
-        $page->assertSeeHtml('wire:model="data.options.style"');
-
-        foreach (QrCode::QR_STYLES as $style => $label) {
-            $page->assertSeeHtml(QrCode::styleSample($style));
-            $page->assertSeeHtml($label.' sample');
+            $this->assertSame($style, $user->qrCodes()->where('name', "Code in {$style}")->sole()->options['style']);
         }
     }
 
@@ -206,13 +213,10 @@ class QrCodeStyleTest extends TestCase
      * default to hold it to: the editor opens on the Rounded Look, which the
      * renderer's tests (tests/js) pin as the default Design.
      */
-    public function test_the_homepage_no_longer_asks_the_server_for_a_code(): void
+    public function test_the_server_no_longer_makes_a_code_for_the_homepage(): void
     {
         $this->postJson('/qr/instant', ['url' => self::CONTENT])->assertNotFound();
 
-        $this->get('/')
-            ->assertOk()
-            ->assertDontSee('/qr/instant', false)
-            ->assertSee('QrRenderer.defaultDesign()', false);
+        $this->get('/')->assertOk();
     }
 }

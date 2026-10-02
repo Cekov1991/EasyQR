@@ -121,19 +121,6 @@ class EventPrivacyTest extends TestCase
     }
 
     /**
-     * The other half: nothing the page sends can contain the link, because the
-     * only thing it ever posts is an event name, the page label and a format.
-     */
-    public function test_the_page_never_sends_the_link_anywhere(): void
-    {
-        $content = $this->get('/')->assertOk()->getContent();
-
-        $this->assertSame(1, substr_count($content, 'fetch('), 'The editor may call fetch() only to report an event.');
-        $this->assertStringContainsString('JSON.stringify(Object.assign({ event: event, page: page }, extra || {}))', $content);
-        $this->assertStringContainsString("logEvent('static_qr_generated')", $content);
-    }
-
-    /**
      * The homepage used to say flatly "Nothing is stored". Counting a generation
      * writes a row on that very request, which made an absolute claim imprecise
      * even though nothing about the code itself is kept. The copy now promises

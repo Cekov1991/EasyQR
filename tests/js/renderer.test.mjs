@@ -1,13 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { CONTENTS, design, drawn, logo, renderer, scansAs, SHORT_URL } from './support.mjs';
+import { CONTENTS, design, drawn, logo, options, renderer, scansAs, SHORT_URL } from './support.mjs';
 
-const SETS = {
-    dot: ['square', 'rounded', 'dots', 'fluid'],
-    corner: ['square', 'rounded', 'circle'],
-    eye: ['square', 'rounded', 'dot'],
-    frame: ['none', 'label', 'border', 'badge'],
-};
+const SETS = Object.fromEntries(
+    ['dot', 'corner', 'eye', 'frame'].map((setting) => [setting, Object.keys(renderer.OPTIONS[setting].values)]),
+);
 
 describe('every shape decodes to exactly its content', () => {
     for (const [name, content] of Object.entries(CONTENTS)) {
@@ -35,7 +32,7 @@ describe('a logo with a 25% wide hidden box decodes', () => {
     ];
 
     for (const [name, content] of Object.entries(CONTENTS)) {
-        for (const shape of ['square', 'rounded', 'circle']) {
+        for (const shape of Object.keys(renderer.OPTIONS.logoShape.values)) {
             for (const box of BOXES) {
                 for (const frame of ['none', 'badge']) {
                     it(`${name}, ${shape} logo, clear space ${box.clearSpace}, backing ${box.backing}, frame ${frame}`, () => {
@@ -52,8 +49,8 @@ describe('a logo with a 25% wide hidden box decodes', () => {
 
 describe('the logo controls cannot reach a blocked value', () => {
     it('limits size to 10-25% and padding to 0-5%', () => {
-        assert.deepEqual(renderer.LOGO_LIMITS.size, { min: 10, max: 25 });
-        assert.deepEqual(renderer.LOGO_LIMITS.padding, { min: 0, max: 5 });
+        assert.deepEqual(renderer.LOGO_LIMITS.size, { min: options.logo.size.min, max: options.logo.size.max });
+        assert.deepEqual(renderer.LOGO_LIMITS.padding, { min: options.logo.padding.min, max: options.logo.padding.max });
     });
 
     it('caps the size at 25% minus twice the padding', () => {
@@ -233,9 +230,67 @@ describe('scan safety', () => {
     });
 });
 
+describe('the option data is the one source', () => {
+    it('serves the renderer exactly what the data file holds', () => {
+        for (const [setting, { label, values }] of Object.entries(options.options)) {
+            assert.equal(renderer.OPTIONS[setting].label, label);
+            assert.deepEqual(renderer.OPTIONS[setting].values, values);
+        }
+        assert.equal(renderer.MAX_FRAME_TEXT, options.frameText.max);
+        assert.deepEqual(Object.keys(renderer.SWATCHES), Object.keys(options.colours));
+    });
+
+    it('offers the default logo only values that are in the sets', () => {
+        assert.ok(Object.keys(renderer.OPTIONS.logoShape.values).includes(renderer.DEFAULT_LOGO.shape));
+        assert.ok(renderer.DEFAULT_LOGO.size >= renderer.LOGO_LIMITS.size.min && renderer.DEFAULT_LOGO.size <= renderer.LOGO_LIMITS.size.max);
+    });
+
+    it('exports the rounded rectangle and circle builders the controls draw their icons with', () => {
+        assert.equal(typeof renderer.roundedRect, 'function');
+        assert.equal(typeof renderer.circle, 'function');
+    });
+});
+
+describe('frame text keeps its font on export', () => {
+    for (const frame of ['label', 'badge']) {
+        it(`a ${frame} frame embeds Manrope in the SVG itself`, () => {
+            const { svg } = drawn(SHORT_URL, design({ frame }));
+            assert.match(svg, /@font-face/);
+            assert.match(svg, /src:\s*url\(data:font\/woff2;base64,[A-Za-z0-9+/=]{1000,}\)/);
+            assert.ok(svg.includes(globalThis.QrFrameFont));
+        });
+
+        it(`a ${frame} frame names the embedded font first in its text`, () => {
+            const { svg } = drawn(SHORT_URL, design({ frame }));
+            const family = /@font-face\s*\{[^}]*font-family:\s*'([^']+)'/.exec(svg)[1];
+            assert.match(svg, new RegExp(`<text[^>]*font-family="'${family}'`));
+            assert.match(svg, /<text[^>]*font-weight="800"/);
+        });
+    }
+
+    for (const frame of ['none', 'border']) {
+        it(`a ${frame} frame carries no text and so no font`, () => {
+            const { svg } = drawn(SHORT_URL, design({ frame }));
+            assert.doesNotMatch(svg, /@font-face/);
+            assert.doesNotMatch(svg, /data:font/);
+        });
+    }
+
+    it('has no external reference, so a saved SVG and a canvas PNG need nothing from the network', () => {
+        const { svg } = drawn(SHORT_URL, design({ frame: 'badge' }));
+        assert.doesNotMatch(svg, /https?:\/\/(?!www\.w3\.org)/);
+    });
+
+    it('the frame text is escaped inside the SVG', () => {
+        const { svg } = drawn(SHORT_URL, design({ frame: 'label', frameText: '<b>&' }));
+        assert.ok(svg.includes('&lt;b&gt;&amp;'));
+    });
+});
+
 describe('looks', () => {
     it('are Rounded, Ink, Bloom and Soft, Rounded first', () => {
-        assert.deepEqual(Object.keys(renderer.LOOKS), ['rounded', 'ink', 'bloom', 'soft']);
+        assert.deepEqual(Object.keys(renderer.LOOKS), Object.keys(options.looks));
+        assert.equal(Object.keys(renderer.LOOKS)[0], 'rounded');
     });
 
     it('make the default design Rounded', () => {

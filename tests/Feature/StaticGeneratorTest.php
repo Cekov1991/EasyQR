@@ -4,235 +4,58 @@ namespace Tests\Feature;
 
 use App\Enums\SignupSource;
 use App\Models\User;
-use App\Support\Asset;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 /**
- * The static generator, as the Steps editor, shared by the homepage and the
- * Landing Pages: the link field in the hero, the code drawn in the browser as
- * it is typed, a Look step and a Download step, and the same two register
- * links with the same refs as before.
+ * The static generator, as the Steps editor shared by the homepage and the
+ * Landing Pages. What the editor does in a browser (drawing, steps, downloads,
+ * the scan check) is covered by tests/js/browser.test.mjs; what is checked here
+ * is what the server promises: the page serves the generator, the promises it
+ * makes in words, and the register links with the right refs.
  */
 class StaticGeneratorTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_the_homepage_still_renders_the_whole_generator(): void
+    public function test_the_homepage_serves_the_generator_with_both_register_links(): void
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('id="static-qr-form"', false)
-            ->assertSee('id="static-url"', false)
-            ->assertSee('id="static-result"', false)
-            ->assertSee('id="static-offer"', false)
+            ->assertSee('Your QR code appears here as soon as you type a link.')
             ->assertSee('ref='.SignupSource::StaticInline->value, false)
             ->assertSee('ref='.SignupSource::StaticOffer->value, false);
     }
 
-    public function test_the_link_field_sits_in_the_hero_above_the_editor(): void
-    {
-        $page = $this->get('/')->assertOk()->getContent();
-
-        $this->assertLessThan(strpos($page, 'id="static-url"'), strpos($page, 'class="eq-hero"'));
-        $this->assertLessThan(strpos($page, 'id="static-result"'), strpos($page, 'id="static-url"'));
-    }
-
-    public function test_the_editor_is_hidden_until_a_valid_link_is_typed(): void
+    public function test_the_page_promises_only_what_is_true_of_a_code_drawn_in_the_browser(): void
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('<div id="static-result" class="eq-editor" hidden>', false)
-            ->assertSee('Your QR code appears here as soon as you type a link.');
-    }
-
-    public function test_the_wizard_is_look_then_logo_then_download_in_that_order(): void
-    {
-        $page = $this->get('/')->assertOk()->getContent();
-
-        preg_match_all('/<button[^>]*class="eq-step"[^>]*data-step="(\w+)"/', $page, $steps);
-
-        $this->assertSame(['look', 'logo', 'download'], $steps[1]);
-        $this->assertStringContainsString('<section class="eq-editor-panel" data-step="logo"', $page);
-    }
-
-    public function test_the_logo_step_reads_a_local_file_and_can_be_skipped(): void
-    {
-        $page = $this->get('/')->assertOk()->getContent();
-
-        $this->assertMatchesRegularExpression('/<input type="file" data-logo-file accept="[^"]*image\/png/', $page);
-        $this->assertStringContainsString("'Skip'", $page);
-        $this->assertStringContainsString('QrDesignControls.mount', $page);
-        $this->assertStringNotContainsString('FormData', $page);
-    }
-
-    public function test_every_design_option_in_the_spec_is_on_the_page(): void
-    {
-        $page = $this->get('/')->assertOk()->getContent();
-
-        $options = [
-            'dot' => ['square', 'rounded', 'dots', 'fluid'],
-            'corner' => ['square', 'rounded', 'circle'],
-            'eye' => ['square', 'rounded', 'dot'],
-            'frame' => ['none', 'label', 'border', 'badge'],
-            'logoShape' => ['square', 'rounded', 'circle'],
-        ];
-
-        foreach ($options as $setting => $values) {
-            foreach ($values as $value) {
-                $this->assertStringContainsString('data-setting="'.$setting.'" data-value="'.$value.'"', $page, "$setting $value");
-            }
-        }
-
-        foreach (['codeColor', 'eyeColor', 'bgColor'] as $colour) {
-            $this->assertStringContainsString('data-colour-swatch="'.$colour.'"', $page);
-            $this->assertStringContainsString('data-colour-picker="'.$colour.'"', $page);
-            $this->assertStringContainsString('data-colour-hex="'.$colour.'"', $page);
-        }
-
-        $this->assertMatchesRegularExpression('/data-frame-text [^>]*maxlength="18"/', $page);
-        $this->assertStringContainsString('More shapes and colours', $page);
-        $this->assertStringContainsString('data-logo-range="size"', $page);
-        $this->assertStringContainsString('data-logo-range="padding"', $page);
-        $this->assertStringContainsString('data-logo-switch="backing"', $page);
-        $this->assertStringContainsString('data-logo-switch="clearSpace"', $page);
-    }
-
-    public function test_the_logo_ranges_are_ten_to_twenty_five_and_nought_to_five(): void
-    {
-        $page = $this->get('/')->assertOk()->getContent();
-
-        $this->assertMatchesRegularExpression('/data-logo-range="size" min="10" max="25"/', $page);
-        $this->assertMatchesRegularExpression('/data-logo-range="padding" min="0" max="5"/', $page);
-    }
-
-    public function test_every_option_is_a_labelled_button_that_states_whether_it_is_selected(): void
-    {
-        $page = $this->get('/')->assertOk()->getContent();
-
-        $this->assertMatchesRegularExpression('/<button type="button" class="eq-option" data-setting="dot" data-value="fluid" aria-pressed="false">\s*<span[^>]*><\/span>\s*<span class="eq-option-name">Fluid<\/span>/', $page);
-        $this->assertMatchesRegularExpression('/<button[^>]*data-colour-swatch="codeColor"[^>]*aria-label="Code colour #171b19"[^>]*aria-pressed="false"/', $page);
-        $this->assertMatchesRegularExpression('/<input type="text" class="eq-hex"[^>]*aria-label="Code colour as hex"/', $page);
-        $this->assertMatchesRegularExpression('/<label[^>]*for="qrc-logo-size">Size<\/label>/', $page);
-    }
-
-    public function test_the_controls_are_components_that_work_without_the_wizard(): void
-    {
-        $this->blade('<x-qr-design-controls.shapes /><x-qr-design-controls.colours /><x-qr-design-controls.frame /><x-qr-design-controls.logo />')
-            ->assertSee('data-qr-section="shapes"', false)
-            ->assertSee('data-qr-section="colours"', false)
-            ->assertSee('data-qr-section="frame"', false)
-            ->assertSee('data-qr-section="logo"', false)
-            ->assertSee('data-setting="eye" data-value="dot"', false)
-            ->assertDontSee('static-result', false);
-    }
-
-    public function test_warnings_and_the_reason_a_download_is_blocked_are_stated_on_the_page(): void
-    {
-        $page = $this->get('/')->assertOk()->getContent();
-
-        $this->assertStringContainsString('id="static-warnings"', $page);
-        $this->assertStringContainsString('id="static-blocked"', $page);
-        $this->assertMatchesRegularExpression('/<button[^>]*id="static-download-png"[^>]*aria-describedby="static-blocked"/', $page);
-        $this->assertStringContainsString('QrDesignControls.verdict(design)', $page);
-    }
-
-    public function test_the_look_indicator_ships_and_the_page_loads_the_controls_versioned(): void
-    {
-        $this->get('/')
-            ->assertOk()
-            ->assertSee('id="static-look-name"', false)
-            ->assertSee(Asset::versioned('js/qr-design-controls.js'), false)
-            ->assertSee(Asset::versioned('css/qr-design-controls.css'), false);
-    }
-
-    public function test_the_look_step_draws_its_looks_from_the_renderer_with_rounded_as_the_default(): void
-    {
-        $this->get('/')
-            ->assertOk()
-            ->assertSee('id="static-looks"', false)
-            ->assertSee('Object.keys(QrRenderer.LOOKS)', false)
-            ->assertSee('QrRenderer.defaultDesign()', false)
-            ->assertSee('aria-pressed', false);
-    }
-
-    public function test_the_download_step_offers_png_at_four_sizes_and_svg(): void
-    {
-        $page = $this->get('/')->assertOk()->getContent();
-
-        foreach ([512, 1024, 2048, 4096] as $size) {
-            $this->assertStringContainsString('<option value="'.$size.'"', $page);
-        }
-
-        $this->assertStringContainsString('<option value="1024" selected>', $page);
-        $this->assertStringContainsString('id="static-download-png"', $page);
-        $this->assertStringContainsString('id="static-download-svg"', $page);
-    }
-
-    public function test_copy_and_share_ship_hidden_and_are_revealed_only_where_the_browser_can_do_them(): void
-    {
-        $page = $this->get('/')->assertOk()->getContent();
-
-        $this->assertMatchesRegularExpression('/<button[^>]*id="static-copy"[^>]*\shidden>/', $page);
-        $this->assertMatchesRegularExpression('/<button[^>]*id="static-share"[^>]*\shidden>/', $page);
-        $this->assertStringContainsString('copyButton.hidden = !canCopy', $page);
-        $this->assertStringContainsString('shareButton.hidden = !canShareFiles()', $page);
-        $this->assertStringContainsString('navigator.canShare', $page);
-        $this->assertStringContainsString('typeof window.ClipboardItem', $page);
-    }
-
-    public function test_the_page_loads_the_one_renderer_and_the_link_rules_versioned(): void
-    {
-        $this->get('/')
-            ->assertOk()
-            ->assertSee(Asset::versioned('js/qrcode-generator.js'), false)
-            ->assertSee(Asset::versioned('js/qr-renderer.js'), false)
-            ->assertSee(Asset::versioned('js/qr-link.js'), false);
-    }
-
-    public function test_the_old_server_round_trip_is_gone(): void
-    {
-        $this->get('/')
-            ->assertOk()
-            ->assertDontSee('qr/instant', false)
-            ->assertDontSee('id="static-generate"', false)
-            ->assertDontSee('id="static-qr-img"', false);
-
-        $this->postJson('/qr/instant', ['url' => 'https://example.com'])->assertNotFound();
-        $this->assertFalse(Route::has('qr.instant'));
-    }
-
-    public function test_the_wizard_has_no_fixed_width_that_could_overflow_a_phone(): void
-    {
-        $css = (string) file_get_contents(public_path('css/site.css'));
-
-        $this->assertMatchesRegularExpression('/\.eq-editor \{[^}]*width: 100%;[^}]*max-width: 400px;/s', $css);
-        $this->assertMatchesRegularExpression('/\.eq-editor-link \{[^}]*width: 100%;[^}]*max-width: 480px;/s', $css);
-        $this->assertMatchesRegularExpression('/\.eq-looks \{[^}]*grid-template-columns: repeat\(4, 1fr\);/s', $css);
+            ->assertSee('Free, no account. We never store your code or its link.')
+            ->assertSee('Your logo stays on your device. Nothing is uploaded.');
     }
 
     public function test_the_editor_is_headed_as_the_free_half_of_the_static_and_dynamic_pair(): void
     {
         $this->get('/')
             ->assertOk()
-            ->assertSeeInOrder(['id="static-result"', 'Static QR', 'FREE', 'Dynamic QR', 'PAID'], false);
+            ->assertSeeInOrder(['Static QR', 'FREE', 'Dynamic QR', 'PAID']);
     }
 
-    public function test_the_steps_expose_which_one_is_current_to_assistive_technology(): void
+    public function test_every_control_the_editor_needs_is_on_the_page(): void
     {
-        $this->get('/')
-            ->assertOk()
-            ->assertSee('aria-current="step"', false)
-            ->assertSee('role="status"', false)
-            ->assertSee('aria-label="Your QR code"', false);
+        $page = $this->get('/')->assertOk();
+
+        foreach (['Modules', 'Corners', 'Eye', 'Frame', 'Logo shape', 'Code colour', 'Eye colour', 'Background colour', 'More shapes and colours'] as $heading) {
+            $page->assertSee($heading);
+        }
     }
 
-    public function test_the_homepage_still_carries_the_generator_script(): void
+    public function test_the_server_draws_no_code_for_the_page(): void
     {
-        $this->get('/')
-            ->assertOk()
-            ->assertSee("getElementById('static-qr-form')", false);
+        $this->postJson('/qr/instant', ['url' => 'https://example.com'])->assertNotFound();
+        $this->assertFalse(Route::has('qr.instant'));
     }
 
     public function test_the_dynamic_teaser_stays_on_the_homepage(): void
@@ -243,40 +66,29 @@ class StaticGeneratorTest extends TestCase
             ->assertSee('Log in to generate a dynamic QR');
     }
 
-    public function test_the_homepage_identifies_itself_to_the_generator(): void
-    {
-        $this->get('/')
-            ->assertOk()
-            ->assertSee('data-page="home"', false);
-    }
-
-    public function test_the_page_defaults_to_the_homepage(): void
-    {
-        $this->blade('<x-static-generator />')
-            ->assertSee('data-page="home"', false);
-    }
-
-    public function test_the_page_it_is_embedded_on_is_threaded_through(): void
-    {
-        $this->blade('<x-static-generator page="static-vs-dynamic-qr-code" />')
-            ->assertSee('data-page="static-vs-dynamic-qr-code"', false)
-            ->assertSee('id="static-qr-form"', false)
-            ->assertSee('id="static-result"', false);
-    }
-
     public function test_the_dynamic_teaser_is_not_part_of_the_generator(): void
     {
         $this->blade('<x-static-generator />')
             ->assertDontSee('Log in to generate a dynamic QR');
     }
 
-    public function test_a_signed_in_user_gets_the_dashboard_link_instead_of_the_register_links(): void
+    public function test_the_page_it_is_embedded_on_travels_with_both_register_links(): void
+    {
+        $page = 'static-vs-dynamic-qr-code';
+
+        $this->blade('<x-static-generator page="'.$page.'" />')
+            ->assertSee('ref='.SignupSource::StaticOffer->value.'&amp;page='.$page, false)
+            ->assertSee('ref='.SignupSource::StaticInline->value.'&amp;page='.$page, false);
+    }
+
+    public function test_a_signed_in_user_gets_the_dashboard_link_instead_of_the_register_links_and_the_offer(): void
     {
         $this->actingAs(User::factory()->create())
             ->get('/')
             ->assertOk()
-            ->assertSee('id="static-result"', false)
+            ->assertSee('Your QR code appears here as soon as you type a link.')
+            ->assertSee(route('filament.admin.resources.qr-codes.create'), false)
             ->assertDontSee('ref='.SignupSource::StaticInline->value, false)
-            ->assertDontSee('id="static-offer"', false);
+            ->assertDontSee('That code can never be changed');
     }
 }
