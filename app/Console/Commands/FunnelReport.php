@@ -6,7 +6,9 @@ use App\Enums\SignupSource;
 use App\Enums\TrackedEvent;
 use App\Models\SiteEvent;
 use App\Models\User;
+use App\Support\LandingPages;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 
 /**
@@ -37,7 +39,9 @@ use Illuminate\Support\Carbon;
  */
 class FunnelReport extends Command
 {
-    protected $signature = 'funnel:report {--days=30 : How many days back to report on}';
+    protected $signature = 'funnel:report
+        {--days=30 : How many days back to report on}
+        {--by-page : Also break the page events and the registrations down by page}';
 
     protected $description = 'Report the homepage-to-subscription funnel over a recent window';
 
@@ -101,7 +105,15 @@ class FunnelReport extends Command
             ],
         );
 
+        if ($this->option('by-page')) {
+            $this->pageTable($since);
+        }
+
         $this->registrationTable($since);
+
+        if ($this->option('by-page')) {
+            $this->landingPageRegistrationTable($since);
+        }
 
         $this->newLine();
         $this->line('<fg=gray>  The offer figures are reported by browsers and are forgeable up to the</>');
@@ -155,6 +167,117 @@ class FunnelReport extends Command
         $this->newLine();
         $this->line('  <options=bold>Registrations by source</> <fg=gray>— from account rows, exact</>');
         $this->table(['Source', 'Registered', 'Subscribed', 'Conversion'], $rows);
+    }
+
+    /**
+     * Registrations by the Landing Page their link sat on, split by which link
+     * it was, so the offer against the inline link reads on every page as it
+     * does on the homepage. Exact, like the table above.
+     *
+     * Only pairs with a registration in the window are listed. Everything else
+     * is one row, so the column still adds up to the accounts made in the
+     * window: a page is null for every registration from the homepage or from
+     * nowhere in particular, and for every one made before the column existed.
+     */
+    private function landingPageRegistrationTable(Carbon $since): void
+    {
+        $inWindow = fn (): Builder => User::query()->where('created_at', '>=', $since);
+
+        $credited = fn (): Builder => $inWindow()
+            ->whereNotNull('signup_landing_page')
+            ->selectRaw('signup_landing_page, signup_source, count(*) as total')
+            ->groupBy('signup_landing_page', 'signup_source')
+            ->orderBy('signup_landing_page')
+            ->orderBy('signup_source');
+
+        $subscribed = $credited()
+            ->whereHas('subscriptions')
+            ->toBase()
+            ->get()
+            ->mapWithKeys(fn (object $row): array => [$this->pageAndSource($row) => (int) $row->total]);
+
+        $rows = $credited()
+            ->toBase()
+            ->get()
+            ->map(function (object $row) use ($subscribed): array {
+                $subscribedCount = $subscribed[$this->pageAndSource($row)] ?? 0;
+
+                return [
+                    $row->signup_landing_page,
+                    $row->signup_source,
+                    (int) $row->total,
+                    $subscribedCount,
+                    $this->rate($subscribedCount, (int) $row->total),
+                ];
+            })
+            ->all();
+
+        $uncredited = $inWindow()->whereNull('signup_landing_page');
+        $uncreditedTotal = (clone $uncredited)->count();
+        $uncreditedPaying = (clone $uncredited)->whereHas('subscriptions')->count();
+
+        $rows[] = ['(no landing page)', '—', $uncreditedTotal, $uncreditedPaying, $this->rate($uncreditedPaying, $uncreditedTotal)];
+
+        $this->newLine();
+        $this->line('  <options=bold>Registrations by landing page</> <fg=gray>— from account rows, exact</>');
+        $this->table(['Page', 'Source', 'Registered', 'Subscribed', 'Conversion'], $rows);
+    }
+
+    /**
+     * One key per page-and-source pair, for matching a pair's subscribed
+     * count back to its registered count.
+     */
+    private function pageAndSource(object $row): string
+    {
+        return $row->signup_landing_page.'|'.$row->signup_source;
+    }
+
+    /**
+     * The events that carry a `page` label, counted per page.
+     *
+     * Every Landing Page is considered, not only the published ones, because a
+     * page unpublished during the window still collected counts while it was
+     * live. A page with nothing in the window is left out as noise; the
+     * homepage always stays, as the row the others are read against.
+     *
+     * Rows written before the label existed carry none. They are shown as
+     * their own row rather than credited to the homepage, which would be a
+     * guess, or dropped, which would stop the column adding up to the totals.
+     */
+    private function pageTable(Carbon $since): void
+    {
+        $events = [
+            TrackedEvent::StaticQrGenerated,
+            TrackedEvent::QrDownloaded,
+            TrackedEvent::OfferShown,
+            TrackedEvent::OfferClicked,
+            TrackedEvent::OfferDismissed,
+        ];
+
+        $rows = [];
+
+        foreach ([LandingPages::HOME, ...array_keys(LandingPages::all()), null] as $page) {
+            $counts = SiteEvent::query()
+                ->since($since)
+                ->whereIn('name', array_map(fn (TrackedEvent $event): string => $event->value, $events))
+                ->onPage($page)
+                ->selectRaw('name, count(*) as total')
+                ->groupBy('name')
+                ->pluck('total', 'name');
+
+            if ($counts->isEmpty() && $page !== LandingPages::HOME) {
+                continue;
+            }
+
+            $rows[] = [
+                $page ?? '(unlabelled)',
+                ...array_map(fn (TrackedEvent $event): int => (int) ($counts[$event->value] ?? 0), $events),
+            ];
+        }
+
+        $this->newLine();
+        $this->line('  <options=bold>By page</> <fg=gray>— the same anonymous counts, split by where they happened</>');
+        $this->table(['Page', 'Generated', 'Downloaded', 'Offer shown', 'Offer clicked', 'Offer dismissed'], $rows);
     }
 
     private function countEvents(TrackedEvent $event, Carbon $since): int

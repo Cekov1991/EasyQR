@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use App\Enums\TrackedEvent;
+use App\Rules\SitePage;
+use App\Support\LandingPages;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -22,8 +24,8 @@ use Illuminate\Validation\Rule;
  *    identifier on these rows to spot a flood with.
  *
  * 2. The request names the event; it never composes the row. `context` is not a
- *    field here. The caller may send one allowlisted extra fact (`format`) and
- *    the request assembles the context itself, so there is no path at all for a
+ *    field here. The caller may send two allowlisted extra facts (`page` and
+ *    `format`) and the request assembles the context itself, so there is no path at all for a
  *    URL, or anything else a visitor typed, to arrive in that column. This is
  *    the same promise the homepage makes about the code itself, applied to the
  *    count written alongside it.
@@ -64,6 +66,13 @@ class LogSiteEventRequest extends FormRequest
 
         return [
             'event' => ['required', 'string', Rule::in(TrackedEvent::clientLoggableValues())],
+
+            /*
+             * Which of our pages it happened on. Optional only so that a
+             * homepage script cached from before the label existed keeps
+             * being counted; see context().
+             */
+            'page' => ['nullable', new SitePage],
 
             /*
              * Only meaningful for a download, and refused everywhere else, so
@@ -118,14 +127,16 @@ class LogSiteEventRequest extends FormRequest
 
     /**
      * The context column, assembled here from allowlisted values rather than
-     * accepted wholesale from the request.
+     * accepted wholesale from the request. A missing page means the homepage,
+     * the only page a pre-label script could have come from.
      *
-     * @return array<string, string>|null
+     * @return array<string, string>
      */
-    public function context(): ?array
+    public function context(): array
     {
         $format = $this->validated('format');
 
-        return $format === null ? null : ['format' => (string) $format];
+        return ['page' => LandingPages::pageLabelOrHome($this->validated('page'))]
+            + ($format === null ? [] : ['format' => (string) $format]);
     }
 }

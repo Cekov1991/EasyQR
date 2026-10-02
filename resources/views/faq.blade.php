@@ -10,7 +10,7 @@
 --}}
 @push('structured-data')
     <script type="application/ld+json">{!! \App\Support\StructuredData::forProduct() !!}</script>
-    <script type="application/ld+json">{!! \App\Support\StructuredData::forFaq() !!}</script>
+    <script type="application/ld+json">{!! \App\Support\StructuredData::forFaq(\App\Support\Faq::questions(), route('faq'), 'Frequently asked questions') !!}</script>
 @endpush
 
 @section('content')

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\QrCode;
+use InvalidArgumentException;
 
 /**
  * The questions people ask before they buy, and after they have paid.
@@ -60,6 +61,26 @@ class Faq
     public static function questions(): array
     {
         return array_merge(...array_column(self::sections(), 'questions'));
+    }
+
+    /**
+     * One question by its anchor, for a Landing Page that quotes an existing
+     * answer rather than rewording it.
+     *
+     * An unknown id throws instead of returning nothing, because a renamed
+     * anchor would otherwise drop the answer from that page without a sound.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    public static function find(string $id): array
+    {
+        foreach (self::questions() as $entry) {
+            if ($entry['id'] === $id) {
+                return $entry;
+            }
+        }
+
+        throw new InvalidArgumentException("There is no FAQ entry with the id [{$id}].");
     }
 
     /**
@@ -304,8 +325,8 @@ class Faq
                 'question' => 'What happens to my codes if I stop paying?',
                 'answer' => <<<HTML
                     <p>
-                        Your <strong>static codes are untouched</strong>. They never depended on us and
-                        they keep working permanently.
+                        Your <strong>static codes are untouched</strong>. They never depended on us, and
+                        they keep working as long as the page they point to is there.
                     </p>
                     <p>
                         Your <strong>dynamic codes stop redirecting</strong>. Anyone who scans one sees a

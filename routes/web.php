@@ -8,6 +8,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QrCodeRedirectController;
 use App\Http\Controllers\SiteEventController;
 use App\Http\Controllers\SubscriptionController;
+use App\Support\LandingPages;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [InstantQrController::class, 'index'])->name('welcome');
@@ -133,3 +134,11 @@ Route::get('cookies/accept', function () {
 })->name('cookies.accept');
 
 require __DIR__.'/auth.php';
+
+/*
+ * One route per published Landing Page, at the top level so the URL is the
+ * search it answers. Last, so a slug can never shadow a route above it, and
+ * only for published pages, so an unpublished one is a 404 rather than a
+ * draft a crawler can find. See App\Support\LandingPages.
+ */
+LandingPages::registerRoutes();

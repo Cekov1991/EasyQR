@@ -78,36 +78,40 @@ class StructuredData
     }
 
     /**
-     * The questions and answers on the FAQ page, in the vocabulary a search
-     * engine and an assistant read.
+     * A page's questions and answers, in the vocabulary a search engine and an
+     * assistant read.
      *
      * This is the markup most worth having on this site. The questions people
-     * type are the questions on that page — whether a printed code can be
+     * type are the questions on these pages — whether a printed code can be
      * edited, what happens when a subscription lapses — and an answer we have
      * marked up is one that can be quoted back with confidence instead of
      * paraphrased out of marketing copy.
      *
-     * Rendered from Faq rather than restated, because a marked-up answer that
-     * disagrees with the prose beside it is worse than no markup at all.
+     * Takes the entries the page renders rather than reading them itself,
+     * because a marked-up answer that disagrees with the prose beside it is
+     * worse than no markup at all. The FAQ page passes every Faq entry; a
+     * Landing Page passes its own, each anchored to that page's URL.
+     *
+     * @param  array<int, array{id: string, question: string, answer: string}>  $entries
      */
-    public static function forFaq(): string
+    public static function forFaq(array $entries, string $url, string $name): string
     {
         $questions = array_map(fn (array $entry): array => [
             '@type' => 'Question',
-            '@id' => route('faq').'#'.$entry['id'],
+            '@id' => $url.'#'.$entry['id'],
             'name' => $entry['question'],
             'acceptedAnswer' => [
                 '@type' => 'Answer',
                 'text' => self::plainText($entry['answer']),
             ],
-        ], Faq::questions());
+        ], $entries);
 
         return self::encode([
             [
                 '@type' => 'FAQPage',
-                '@id' => route('faq').'#faq',
-                'url' => route('faq'),
-                'name' => 'Frequently asked questions',
+                '@id' => $url.'#faq',
+                'url' => $url,
+                'name' => $name,
                 'inLanguage' => 'en',
                 'publisher' => ['@id' => url('/#organization')],
                 'mainEntity' => $questions,

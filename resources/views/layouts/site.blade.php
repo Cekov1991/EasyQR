@@ -98,6 +98,10 @@
             <nav>
                 <a href="{{ route('pricing') }}">Pricing</a>
                 <a href="{{ route('faq') }}">FAQ</a>
+                {{-- Only once published, so the footer never links a 404. --}}
+                @if (\App\Support\LandingPages::isPublished(\App\Support\LandingPages::HUB))
+                    <a href="{{ \App\Support\LandingPages::find(\App\Support\LandingPages::HUB)->url() }}">Static vs dynamic</a>
+                @endif
                 <a href="{{ url('/terms-and-conditions') }}">Terms &amp; Conditions</a>
                 <a href="{{ url('/privacy-policy') }}">Privacy Policy</a>
                 <a href="{{ url('/refund-policy') }}">Refund Policy</a>

@@ -56,6 +56,19 @@ class SiteEvent extends Model
         return $query->where('occurred_at', '>=', $moment);
     }
 
+    /**
+     * Events labelled with one page, or with none (null) for rows written
+     * before the label existed.
+     *
+     * @param  Builder<$this>  $query
+     */
+    public function scopeOnPage(Builder $query, ?string $page): Builder
+    {
+        return $page === null
+            ? $query->whereNull('context->page')
+            : $query->where('context->page', $page);
+    }
+
     /** @param  Builder<$this>  $query */
     public function scopeToday(Builder $query): Builder
     {
