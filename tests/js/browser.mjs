@@ -359,7 +359,7 @@ export async function startBrowser({ seed } = {}) {
             chrome.stop();
             app.stop();
             await wait(200);
-            rmSync(directory, { recursive: true, force: true });
+            rmSync(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
         },
     };
 }
