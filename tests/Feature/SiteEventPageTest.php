@@ -156,7 +156,7 @@ class SiteEventPageTest extends TestCase
     #[DataProvider('refusedPageProvider')]
     public function test_the_generator_refuses_a_page_that_is_not_ours(mixed $page): void
     {
-        $this->publishLandingPage(LandingPages::HUB);
+        $this->unpublishLandingPage('restaurant-menu-qr-code');
 
         $this->generate(['page' => $page])
             ->assertStatus(422)
@@ -168,7 +168,7 @@ class SiteEventPageTest extends TestCase
     #[DataProvider('refusedPageProvider')]
     public function test_the_event_endpoint_refuses_a_page_that_is_not_ours(mixed $page): void
     {
-        $this->publishLandingPage(LandingPages::HUB);
+        $this->unpublishLandingPage('restaurant-menu-qr-code');
 
         $this->report(['event' => TrackedEvent::OfferShown->value, 'page' => $page])
             ->assertStatus(422)
@@ -178,18 +178,18 @@ class SiteEventPageTest extends TestCase
     }
 
     /**
-     * Publishing is the only thing that makes a slug a valid label, so a page
-     * still in review cannot collect counts before anyone can reach it.
+     * Being published is the only thing that makes a slug a valid label, so a
+     * page that is withdrawn stops collecting counts once nobody can reach it.
      */
-    public function test_a_page_becomes_a_valid_label_only_once_published(): void
+    public function test_a_page_is_a_valid_label_only_while_published(): void
     {
         $this->report(['event' => TrackedEvent::OfferShown->value, 'page' => 'qr-code-stopped-working'])
-            ->assertStatus(422);
+            ->assertNoContent();
 
-        $this->publishLandingPage('qr-code-stopped-working');
+        $this->unpublishLandingPage('qr-code-stopped-working');
 
         $this->report(['event' => TrackedEvent::OfferShown->value, 'page' => 'qr-code-stopped-working'])
-            ->assertNoContent();
+            ->assertStatus(422);
     }
 
     /**

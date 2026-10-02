@@ -37,6 +37,15 @@ final readonly class LandingPage
         return clone ($this, ['published' => true]);
     }
 
+    /**
+     * This page as if a person had withdrawn it, for the test seam in
+     * `site.landing_pages.unpublish`.
+     */
+    public function asUnpublished(): self
+    {
+        return clone ($this, ['published' => false]);
+    }
+
     public function routeName(): string
     {
         return 'landing.'.$this->slug;

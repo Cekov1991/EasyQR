@@ -229,15 +229,18 @@ return [
     | Landing Pages
     |--------------------------------------------------------------------------
     |
-    | Slugs to treat as published whatever App\Support\LandingPages says. Empty
-    | in every real environment, and deliberately not read from the environment:
-    | a page is published by a person flipping its flag in the registry after
-    | reading the copy. This exists so a test can render a page still in review.
+    | Slugs to treat as published, or as unpublished, whatever
+    | App\Support\LandingPages says. Empty in every real environment, and
+    | deliberately not read from the environment: a page is published by a
+    | person flipping its flag in the registry after reading the copy. These
+    | exist so a test can render a page still in review, or prove a page that
+    | is withdrawn disappears everywhere.
     |
     */
 
     'landing_pages' => [
         'publish' => [],
+        'unpublish' => [],
     ],
 
 ];

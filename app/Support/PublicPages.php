@@ -100,6 +100,9 @@ class PublicPages
      * customer's analytics and follows the redirect to a third-party
      * destination we do not control.
      *
+     * Every entry is a prefix, so a panel is closed with its trailing slash:
+     * a bare `/free` also closed `/free-qr-code-no-expiration`.
+     *
      * @return array<int, string>
      */
     public static function closedPaths(): array
@@ -107,7 +110,7 @@ class PublicPages
         return [
             '/q/',
             '/admin',
-            '/free',
+            '/free/',
             '/dashboard',
             '/profile',
             '/billing',

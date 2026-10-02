@@ -17,7 +17,8 @@ use Illuminate\Support\Facades\Route;
  *
  * A page is published by a person, after reading its copy: the flag here is
  * the only switch. `site.landing_pages.publish` exists so a test can render a
- * page still in review without that switch being thrown.
+ * page still in review without that switch being thrown, and
+ * `site.landing_pages.unpublish` so a test can withdraw one.
  */
 class LandingPages
 {
@@ -57,7 +58,7 @@ class LandingPages
                     'static-expiry',
                     'stop-paying',
                 ],
-                published: false,
+                published: true,
             ),
             new LandingPage(
                 slug: 'qr-code-stopped-working',
@@ -72,7 +73,7 @@ class LandingPages
                     'static-expiry',
                     'stop-paying',
                 ],
-                published: false,
+                published: true,
             ),
             new LandingPage(
                 slug: 'qr-code-expired',
@@ -87,7 +88,7 @@ class LandingPages
                     'static-expiry',
                     'free-trial',
                 ],
-                published: false,
+                published: true,
             ),
             new LandingPage(
                 slug: 'free-qr-code-no-expiration',
@@ -102,7 +103,7 @@ class LandingPages
                     'static-expiry',
                     'static-recover',
                 ],
-                published: false,
+                published: true,
             ),
             new LandingPage(
                 slug: 'qr-code-without-subscription',
@@ -117,7 +118,7 @@ class LandingPages
                     'free-trial',
                     'cancelling',
                 ],
-                published: false,
+                published: true,
             ),
             new LandingPage(
                 slug: 'fix-printed-qr-code',
@@ -132,7 +133,7 @@ class LandingPages
                     'edit-after-printing',
                     'static-to-dynamic',
                 ],
-                published: false,
+                published: true,
             ),
             new LandingPage(
                 slug: 'restaurant-menu-qr-code',
@@ -147,7 +148,7 @@ class LandingPages
                     'edit-after-printing',
                     'printing',
                 ],
-                published: false,
+                published: true,
             ),
             new LandingPage(
                 slug: 'real-estate-qr-code',
@@ -162,7 +163,7 @@ class LandingPages
                     'more-codes',
                     'printing',
                 ],
-                published: false,
+                published: true,
             ),
             new LandingPage(
                 slug: 'business-card-qr-code',
@@ -177,7 +178,7 @@ class LandingPages
                     'edit-after-printing',
                     'logo-and-colour',
                 ],
-                published: false,
+                published: true,
             ),
             new LandingPage(
                 slug: 'event-qr-code',
@@ -192,7 +193,7 @@ class LandingPages
                     'free-trial',
                     'cancelling',
                 ],
-                published: false,
+                published: true,
             ),
             new LandingPage(
                 slug: 'flyer-poster-qr-code',
@@ -207,7 +208,7 @@ class LandingPages
                     'scan-data',
                     'more-codes',
                 ],
-                published: false,
+                published: true,
             ),
             new LandingPage(
                 slug: 'product-packaging-qr-code',
@@ -222,7 +223,7 @@ class LandingPages
                     self::staticOnPackaging(),
                     'static-to-dynamic',
                 ],
-                published: false,
+                published: true,
             ),
             new LandingPage(
                 slug: 'google-review-qr-code',
@@ -237,14 +238,16 @@ class LandingPages
                     self::askingForReviews(),
                     'printing',
                 ],
-                published: false,
+                published: true,
             ),
         ];
 
         $forced = (array) config('site.landing_pages.publish', []);
+        $withdrawn = (array) config('site.landing_pages.unpublish', []);
 
         return collect($pages)
             ->map(fn (LandingPage $page): LandingPage => in_array($page->slug, $forced, true) ? $page->asPublished() : $page)
+            ->map(fn (LandingPage $page): LandingPage => in_array($page->slug, $withdrawn, true) ? $page->asUnpublished() : $page)
             ->keyBy('slug')
             ->all();
     }

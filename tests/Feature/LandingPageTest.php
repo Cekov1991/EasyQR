@@ -48,11 +48,13 @@ class LandingPageTest extends TestCase
     }
 
     /**
-     * Copy is written unpublished and a person reads it before it goes live.
+     * Every page's copy has been read and approved, so every page is live.
+     * A page added later is written unpublished and fails this until a
+     * person has read it and thrown the switch.
      */
-    public function test_nothing_is_published_until_a_person_has_read_it(): void
+    public function test_every_page_has_been_read_and_published(): void
     {
-        $this->assertSame([], LandingPages::published());
+        $this->assertSame(array_keys(LandingPages::all()), array_keys(LandingPages::published()));
     }
 
     public function test_every_related_slug_names_a_page_in_the_registry(): void
@@ -87,6 +89,8 @@ class LandingPageTest extends TestCase
 
     public function test_an_unpublished_page_has_no_route(): void
     {
+        $this->unpublishLandingPage(self::HUB);
+
         $this->get('/'.self::HUB)->assertNotFound();
     }
 
@@ -106,14 +110,15 @@ class LandingPageTest extends TestCase
     }
 
     /**
-     * Publishing one page must not quietly publish the others.
+     * Withdrawing one page must not quietly withdraw the others.
      */
-    public function test_publishing_one_page_leaves_the_rest_unpublished(): void
+    public function test_unpublishing_one_page_leaves_the_rest_published(): void
     {
-        $this->publishLandingPage(self::HUB);
+        $this->unpublishLandingPage(self::HUB);
 
-        $this->get('/qr-code-stopped-working')->assertNotFound();
-        $this->assertSame([self::HUB], array_keys(LandingPages::published()));
+        $this->get('/qr-code-stopped-working')->assertOk();
+        $this->assertNotContains(self::HUB, array_keys(LandingPages::published()));
+        $this->assertCount(count(LandingPages::all()) - 1, LandingPages::published());
     }
 
     /**
@@ -432,8 +437,9 @@ class LandingPageTest extends TestCase
         $this->publishLandingPage($slug);
 
         $html = $this->get('/'.$slug)->assertOk()->getContent();
+        $text = str_replace(LandingPages::find('qr-code-expired')->h1, '', html_entity_decode(strip_tags($html)));
 
-        $this->assertStringNotContainsStringIgnoringCase('expired', strip_tags($html));
+        $this->assertStringNotContainsStringIgnoringCase('expired', $text, 'Only a link to the expired page may name it by its H1.');
     }
 
     /**
@@ -532,6 +538,8 @@ class LandingPageTest extends TestCase
 
     public function test_an_unpublished_page_is_in_neither(): void
     {
+        $this->unpublishLandingPage(...array_keys(LandingPages::all()));
+
         $sitemap = $this->get('/sitemap.xml')->getContent();
         $llms = $this->get('/llms.txt')->getContent();
 
@@ -541,13 +549,13 @@ class LandingPageTest extends TestCase
         }
     }
 
-    public function test_the_footer_links_the_hub_only_once_it_is_published(): void
+    public function test_the_footer_links_the_hub_only_while_it_is_published(): void
     {
-        $this->get('/')->assertOk()->assertDontSee('/'.self::HUB, false);
-
-        $this->publishLandingPage(self::HUB);
-
         $this->get('/')->assertOk()->assertSee('href="'.url('/'.self::HUB).'"', false);
+
+        $this->unpublishLandingPage(self::HUB);
+
+        $this->get('/')->assertOk()->assertDontSee('/'.self::HUB, false);
     }
 
     /**
@@ -556,7 +564,7 @@ class LandingPageTest extends TestCase
      */
     public function test_related_links_skip_unpublished_pages(): void
     {
-        $this->publishLandingPage(self::HUB);
+        $this->unpublishLandingPage(...array_diff(array_keys(LandingPages::all()), [self::HUB]));
 
         $html = $this->get('/'.self::HUB)->assertOk()->getContent();
 
@@ -569,7 +577,7 @@ class LandingPageTest extends TestCase
 
     public function test_related_pages_are_listed_once_published(): void
     {
-        $this->publishLandingPage(self::HUB, 'qr-code-stopped-working');
+        $this->unpublishLandingPage(...array_diff(array_keys(LandingPages::all()), [self::HUB, 'qr-code-stopped-working']));
 
         $related = array_map(fn (LandingPage $page): string => $page->slug, LandingPages::relatedTo(LandingPages::find(self::HUB)));
 

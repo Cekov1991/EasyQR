@@ -142,6 +142,8 @@ class SignupLandingPageTest extends TestCase
      */
     public function test_an_unpublished_page_is_discarded(): void
     {
+        $this->unpublishLandingPage(self::HUB);
+
         $user = $this->registerWith(['ref' => SignupSource::LandingCta->value, 'page' => self::HUB]);
 
         $this->assertSame(SignupSource::LandingCta, $user->signup_source);
