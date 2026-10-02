@@ -39,6 +39,10 @@
 
     {{-- The editor: lives outside the cards so drawing a code never changes their height. --}}
     <div id="static-result" class="eq-editor" hidden>
+        <div class="eq-card-head">
+            <span class="eq-card-title">Static QR</span>
+            <span class="eq-badge">FREE</span>
+        </div>
 
         <ol class="eq-steps">
             <li><button type="button" class="eq-step" data-step="look" aria-current="step"><span class="eq-step-number" aria-hidden="true">1</span>Look</button></li>

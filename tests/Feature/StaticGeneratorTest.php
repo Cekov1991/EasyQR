@@ -207,9 +207,16 @@ class StaticGeneratorTest extends TestCase
     {
         $css = (string) file_get_contents(public_path('css/site.css'));
 
-        $this->assertMatchesRegularExpression('/\.eq-editor \{[^}]*width: 100%;[^}]*max-width: 440px;/s', $css);
+        $this->assertMatchesRegularExpression('/\.eq-editor \{[^}]*width: 100%;[^}]*max-width: 400px;/s', $css);
         $this->assertMatchesRegularExpression('/\.eq-editor-link \{[^}]*width: 100%;[^}]*max-width: 480px;/s', $css);
         $this->assertMatchesRegularExpression('/\.eq-looks \{[^}]*grid-template-columns: repeat\(4, 1fr\);/s', $css);
+    }
+
+    public function test_the_editor_is_headed_as_the_free_half_of_the_static_and_dynamic_pair(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSeeInOrder(['id="static-result"', 'Static QR', 'FREE', 'Dynamic QR', 'PAID'], false);
     }
 
     public function test_the_steps_expose_which_one_is_current_to_assistive_technology(): void
