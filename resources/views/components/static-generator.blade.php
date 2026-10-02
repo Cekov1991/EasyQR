@@ -1,69 +1,90 @@
 @props(['page' => 'home'])
 
 {{--
-    The static generator: the free card, its result panel with the offer and
-    the inline link, and the script that drives them. Shared by the homepage
-    and the Landing Pages, so the code a visitor downloads is the same thing
-    wherever they made it.
+    The static generator, as the Steps editor: the link field in the hero, the
+    visitor's own code drawn beneath it as they type, and a short wizard —
+    Look, then Download. Shared by the homepage and the Landing Pages, so the
+    code a visitor downloads is the same thing wherever they made it.
+
+    The code is drawn in the browser by the one renderer (public/js/qr-renderer.js,
+    ADR-0005). The link never leaves the page: the only thing sent to us is an
+    event, and none of them carries the link. The offer still opens after the
+    first download.
 
     `page` names the page it is embedded on: `home`, or a Landing Page slug.
     The offer and the inline link carry it to registration as the Signup
-    Landing Page, beside their own refs.
-    Anything passed in the slot sits beside the static card in the same grid,
-    which is how the homepage keeps its dynamic teaser card next to it.
+    Landing Page, beside their own refs, and every event carries it too.
+    Anything passed in the slot sits below the editor in a grid of its own,
+    which is how the homepage keeps its dynamic teaser card.
 
     One per page: the element ids are fixed, and the script is pushed once.
 --}}
-<div class="eq-card-grid">
+<div class="eq-editor-wrap">
 
-    {{-- Static QR: free, generated on the fly, never stored --}}
-    <div class="eq-card eq-card--choice">
-        <div class="eq-card-head">
-            <span class="eq-card-title">Static QR</span>
-            <span class="eq-badge">FREE</span>
+    {{-- The hero's link field. Everything below it appears once the link is valid. --}}
+    <form id="static-qr-form" class="eq-editor-link" data-page="{{ $page }}" novalidate>
+        <label for="static-url" class="eq-label">Website or link</label>
+        <input type="text" id="static-url" class="eq-input eq-input--hero" placeholder="https://example.com" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="url" aria-describedby="static-error">
+        <p id="static-error" class="eq-editor-message" data-tone="hint" role="status">Your QR code appears here as soon as you type a link.</p>
+        <p class="eq-editor-promise">Free, no account. We never store your code or its link.</p>
+    </form>
+
+    {{-- The editor: lives outside the cards so drawing a code never changes their height. --}}
+    <div id="static-result" class="eq-editor" hidden>
+
+        <ol class="eq-steps">
+            <li><button type="button" class="eq-step" data-step="look" aria-current="step"><span class="eq-step-number" aria-hidden="true">1</span>Look</button></li>
+            <li><button type="button" class="eq-step" data-step="download" aria-current="false"><span class="eq-step-number" aria-hidden="true">2</span>Download</button></li>
+        </ol>
+
+        <div id="static-preview" class="eq-editor-preview" role="img" aria-label="Your QR code"></div>
+
+        <section class="eq-editor-panel" data-step="look" aria-label="Look">
+            <p class="eq-editor-hint">Pick a look. Each one is drawn with your own link.</p>
+            <div id="static-looks" class="eq-looks" role="group" aria-label="Look"></div>
+        </section>
+
+        <section class="eq-editor-panel" data-step="download" aria-label="Download" hidden>
+            <div class="eq-editor-size">
+                <label for="static-png-size" class="eq-label">PNG size</label>
+                <select id="static-png-size" class="eq-input">
+                    <option value="512">512 px</option>
+                    <option value="1024" selected>1024 px</option>
+                    <option value="2048">2048 px</option>
+                    <option value="4096">4096 px</option>
+                </select>
+            </div>
+            <div class="eq-actions">
+                <button type="button" id="static-download-png" class="eq-btn eq-btn-primary eq-btn--sm">Download PNG</button>
+                <button type="button" id="static-download-svg" class="eq-btn eq-btn-outline eq-btn--sm">Download SVG</button>
+                <button type="button" id="static-copy" class="eq-btn eq-btn-outline eq-btn--sm" hidden>Copy as an image</button>
+                <button type="button" id="static-share" class="eq-btn eq-btn-outline eq-btn--sm" hidden>Share</button>
+            </div>
+            <p id="static-status" class="eq-editor-status" role="status"></p>
+            <p class="eq-editor-hint">Scan it with your phone before you print.</p>
+            <p class="eq-editor-hint">
+                A static code can never be changed. Need to edit the link later or track scans?
+                @auth
+                    <a href="{{ route('filament.admin.resources.qr-codes.create') }}">Create a dynamic QR</a>
+                @else
+                    {{-- Tagged so its conversions can be told apart from the offer's below. --}}
+                    <a href="{{ \App\Filament\Pages\Auth\Register::linkFrom(\App\Enums\SignupSource::StaticInline, $page) }}">Create a dynamic QR</a>
+                @endauth
+            </p>
+        </section>
+
+        <div class="eq-editor-nav">
+            <button type="button" id="static-back" class="eq-btn eq-btn-outline eq-btn--sm" hidden>Back</button>
+            <button type="button" id="static-next" class="eq-btn eq-btn-dark eq-btn--sm">Next</button>
         </div>
-        <p class="eq-price">Free<span class="eq-price-period">forever</span></p>
-        <p class="eq-price-note">No account, no payment, no expiry.</p>
-        <p class="eq-card-text">
-            Generated instantly and shown on screen. We never store your code or its link. Refresh the page and it’s gone, so download it right away.
-        </p>
-        <ul class="eq-check-list">
-            <li><span class="eq-check">✓</span>No account needed</li>
-            <li><span class="eq-check">✓</span>Keeps working permanently</li>
-            <li><span class="eq-check">✓</span>Instant download (PNG/SVG)</li>
-        </ul>
-        <form id="static-qr-form" class="eq-card-form" data-page="{{ $page }}">
-            <label for="static-url" class="eq-label">Website or link</label>
-            <input type="text" id="static-url" class="eq-input" placeholder="https://example.com" autocomplete="off">
-            <button type="submit" id="static-generate" class="eq-btn eq-btn-primary">Generate QR Code</button>
-            <p id="static-error" class="eq-error"></p>
-        </form>
     </div>
 
-    {{ $slot }}
-
-</div>
-
-{{-- QR result: lives outside the cards so generating never changes their height --}}
-<div id="static-result" class="eq-result-panel" hidden>
-    <img id="static-qr-img" src="" alt="Your QR code">
-    <div class="eq-result-info">
-        <h2 class="eq-h2">Your QR code is ready</h2>
-        <p>Scan it with your phone to test it, then download it. We never store your code or its link, so once you leave this page it’s gone.</p>
-        <div class="eq-actions">
-            <a id="static-download-png" href="#" download="qr-code.png" class="eq-btn eq-btn-primary eq-btn--sm">Download PNG</a>
-            <a id="static-download-svg" href="#" download="qr-code.svg" class="eq-btn eq-btn-outline eq-btn--sm">Download SVG</a>
+    @if (! $slot->isEmpty())
+        <div class="eq-card-grid">
+            {{ $slot }}
         </div>
-        <p style="font-size:13px">
-            A static code can never be changed. Need to edit the link later or track scans?
-            @auth
-                <a href="{{ route('filament.admin.resources.qr-codes.create') }}">Create a dynamic QR</a>
-            @else
-                {{-- Tagged so its conversions can be told apart from the offer's below. --}}
-                <a href="{{ \App\Filament\Pages\Auth\Register::linkFrom(\App\Enums\SignupSource::StaticInline, $page) }}">Create a dynamic QR</a>
-            @endauth
-        </p>
-    </div>
+    @endif
+
 </div>
 
 {{--
@@ -126,30 +147,50 @@
 @endguest
 
 @pushOnce('scripts')
+    <script src="{{ \App\Support\Asset::versioned('js/qrcode-generator.js') }}"></script>
+    <script src="{{ \App\Support\Asset::versioned('js/qr-renderer.js') }}"></script>
+    <script src="{{ \App\Support\Asset::versioned('js/qr-link.js') }}"></script>
     <script>
         (function () {
             const form = document.getElementById('static-qr-form');
             const input = document.getElementById('static-url');
-            const button = document.getElementById('static-generate');
-            const error = document.getElementById('static-error');
+            const message = document.getElementById('static-error');
             const result = document.getElementById('static-result');
-            const image = document.getElementById('static-qr-img');
+            const preview = document.getElementById('static-preview');
+            const looks = document.getElementById('static-looks');
+            const sizeSelect = document.getElementById('static-png-size');
             const downloadPng = document.getElementById('static-download-png');
             const downloadSvg = document.getElementById('static-download-svg');
+            const copyButton = document.getElementById('static-copy');
+            const shareButton = document.getElementById('static-share');
+            const status = document.getElementById('static-status');
+            const backButton = document.getElementById('static-back');
+            const nextButton = document.getElementById('static-next');
             const csrf = document.querySelector('meta[name="csrf-token"]').content;
+
+            /*
+             * The same prohibited lists the server applies to a dynamic code's
+             * destination, rendered from the model's constants so there is one
+             * list. public/js/qr-link.js applies them in the browser now that
+             * the link is never sent anywhere.
+             */
+            const linkRules = @js([
+                'domains' => \App\Models\QrCode::PROHIBITED_DOMAINS,
+                'keywords' => \App\Models\QrCode::PROHIBITED_KEYWORDS,
+                'extensions' => \App\Models\QrCode::PROHIBITED_EXTENSIONS,
+            ]);
 
             /*
              * The page this generator is embedded on: `home`, or a Landing
              * Page slug. Read from the form rather than rendered into the
              * script, because the script is pushed once per page and must not
-             * assume which page that is. Sent with the generate request and
-             * with every event, and checked server-side against the pages
-             * that exist.
+             * assume which page that is. Sent with every event, and checked
+             * server-side against the pages that exist.
              */
             const page = form.dataset.page;
 
             /**
-             * Reports one of the four events that only this page can see. Event
+             * Reports one of the events that only this page can see. Event
              * names are rendered from the TrackedEvent enum rather than typed
              * here, so a renamed case cannot leave the page quietly posting a
              * value the endpoint no longer accepts.
@@ -181,12 +222,6 @@
                 } catch (e) {
                     // Counting must never be the reason something else fails.
                 }
-            }
-
-            function showError(message) {
-                error.textContent = message;
-                error.style.display = 'block';
-                result.hidden = true;
             }
 
             const offer = document.getElementById('static-offer');
@@ -332,72 +367,273 @@
                 });
             }
 
-            /*
-             * A download is a click on a data: URI, which never reaches the
-             * server — so the click is the only evidence it happened. The
-             * listeners are attached once, not per generation, and the format
-             * tells the two buttons apart.
+            /**
+             * A download never reaches the server, so the click is the only
+             * evidence it happened. The format tells the two buttons apart.
              */
             function handleDownload(format) {
                 logEvent('{{ \App\Enums\TrackedEvent::QrDownloaded->value }}', { format: format });
                 window.setTimeout(revealOffer, REVEAL_DELAY_MS);
             }
 
-            downloadPng.addEventListener('click', function () {
-                handleDownload('png');
+            const ERROR_DELAY_MS = 700;
+            const SVG_PIXELS = 1024;
+            const TOO_LONG = 'That link is too long to fit in a QR code.';
+
+            let design = QrRenderer.defaultDesign();
+            let link = null;
+            let errorTimer = null;
+            let reportedGenerated = false;
+
+            function say(text, tone) {
+                message.textContent = text;
+                message.dataset.tone = tone;
+            }
+
+            function showStatus(text) {
+                status.textContent = text;
+            }
+
+            function showStep(name) {
+                document.querySelectorAll('.eq-editor-panel').forEach(function (panel) {
+                    panel.hidden = panel.dataset.step !== name;
+                });
+
+                document.querySelectorAll('.eq-step').forEach(function (step) {
+                    step.setAttribute('aria-current', step.dataset.step === name ? 'step' : 'false');
+                });
+
+                backButton.hidden = name === 'look';
+                nextButton.hidden = name === 'download';
+                preview.classList.toggle('is-small', name === 'look');
+                showStatus('');
+            }
+
+            function currentStep() {
+                return document.querySelector('.eq-step[aria-current="step"]').dataset.step;
+            }
+
+            const lookButtons = {};
+
+            Object.keys(QrRenderer.LOOKS).forEach(function (key) {
+                const button = document.createElement('button');
+                const thumb = document.createElement('span');
+                const name = document.createElement('span');
+
+                button.type = 'button';
+                button.className = 'eq-look';
+                button.dataset.look = key;
+                thumb.className = 'eq-look-thumb';
+                thumb.setAttribute('aria-hidden', 'true');
+                name.className = 'eq-look-name';
+                name.textContent = QrRenderer.LOOKS[key].label;
+                button.append(thumb, name);
+
+                button.addEventListener('click', function () {
+                    design = QrRenderer.applyLook(design, key);
+                    draw();
+                });
+
+                looks.append(button);
+                lookButtons[key] = button;
             });
 
-            downloadSvg.addEventListener('click', function () {
-                handleDownload('svg');
-            });
+            function paintLooks() {
+                const active = QrRenderer.lookOf(design);
 
-            form.addEventListener('submit', async function (event) {
-                event.preventDefault();
+                Object.keys(lookButtons).forEach(function (key) {
+                    const button = lookButtons[key];
 
-                const url = input.value.trim();
-                if (!url) {
-                    showError('Please enter a URL.');
+                    button.setAttribute('aria-pressed', key === active ? 'true' : 'false');
+                    button.querySelector('.eq-look-thumb').innerHTML = QrRenderer.render(link, QrRenderer.applyLook(Object.assign({}, design, { frame: 'none' }), key)).svg;
+                });
+            }
+
+            function hideCode() {
+                link = null;
+                result.hidden = true;
+            }
+
+            /**
+             * Judges the field and either draws the code or says why not. Runs
+             * on every keystroke; the code redraws as they type.
+             */
+            function draw() {
+                const checked = QrLink.check(input.value, linkRules);
+
+                window.clearTimeout(errorTimer);
+
+                if (!checked.valid) {
+                    hideCode();
+
+                    if (checked.empty) {
+                        say('Your QR code appears here as soon as you type a link.', 'hint');
+                    } else {
+                        say(checked.message, 'hint');
+                        errorTimer = window.setTimeout(function () {
+                            say(checked.message, 'error');
+                        }, ERROR_DELAY_MS);
+                    }
+
                     return;
                 }
 
-                button.disabled = true;
-                button.textContent = 'Generating…';
-                error.style.display = 'none';
+                let drawn;
 
                 try {
-                    const response = await fetch('{{ route('qr.instant') }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': csrf,
-                        },
-                        body: JSON.stringify({ url: url, page: page }),
-                    });
-
-                    const data = await response.json().catch(() => null);
-
-                    if (!response.ok) {
-                        if (response.status === 429) {
-                            showError('Too many requests. Please wait a minute and try again.');
-                        } else {
-                            showError((data && (data.errors?.url?.[0] || data.message)) || 'Something went wrong. Please try again.');
-                        }
-                        return;
-                    }
-
-                    image.src = data.png;
-                    downloadPng.href = data.png;
-                    downloadSvg.href = data.svg;
-                    result.hidden = false;
-                    result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    drawn = QrRenderer.render(checked.link, design);
                 } catch (e) {
-                    showError('Something went wrong. Please try again.');
-                } finally {
-                    button.disabled = false;
-                    button.textContent = 'Generate QR Code';
+                    hideCode();
+                    say(TOO_LONG, 'error');
+
+                    return;
+                }
+
+                link = checked.link;
+                say('', 'hint');
+                preview.innerHTML = drawn.svg;
+                preview.style.aspectRatio = drawn.width + ' / ' + drawn.height;
+                paintLooks();
+                result.hidden = false;
+
+                /*
+                 * Counted once per page view, the first time a valid link is
+                 * drawn. The event names the page and nothing else: the link
+                 * is not part of it.
+                 */
+                if (!reportedGenerated) {
+                    reportedGenerated = true;
+                    logEvent('{{ \App\Enums\TrackedEvent::StaticQrGenerated->value }}');
+                }
+            }
+
+            function pixelsWide() {
+                return parseInt(sizeSelect.value, 10);
+            }
+
+            function svgBlob() {
+                return new Blob([QrRenderer.render(link, design, { pixelWidth: SVG_PIXELS }).svg], { type: 'image/svg+xml' });
+            }
+
+            function pngBlob(width) {
+                return new Promise(function (resolve, reject) {
+                    const drawn = QrRenderer.render(link, design, { pixelWidth: width });
+                    const height = Math.round(width * drawn.height / drawn.width);
+                    const source = URL.createObjectURL(new Blob([drawn.svg], { type: 'image/svg+xml' }));
+                    const image = new Image();
+
+                    image.onload = function () {
+                        const canvas = document.createElement('canvas');
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        canvas.getContext('2d').drawImage(image, 0, 0, width, height);
+                        URL.revokeObjectURL(source);
+                        canvas.toBlob(function (blob) {
+                            return blob ? resolve(blob) : reject(new Error('empty'));
+                        }, 'image/png');
+                    };
+
+                    image.onerror = function () {
+                        URL.revokeObjectURL(source);
+                        reject(new Error('unreadable'));
+                    };
+
+                    image.src = source;
+                });
+            }
+
+            function save(blob, name) {
+                const anchor = document.createElement('a');
+
+                anchor.href = URL.createObjectURL(blob);
+                anchor.download = name;
+                document.body.appendChild(anchor);
+                anchor.click();
+                anchor.remove();
+                window.setTimeout(function () {
+                    URL.revokeObjectURL(anchor.href);
+                }, 1000);
+            }
+
+            downloadPng.addEventListener('click', async function () {
+                try {
+                    save(await pngBlob(pixelsWide()), 'qr-code.png');
+                    showStatus('PNG downloaded.');
+                    handleDownload('png');
+                } catch (e) {
+                    showStatus('Your browser could not make the PNG. Try the SVG instead.');
                 }
             });
+
+            downloadSvg.addEventListener('click', function () {
+                save(svgBlob(), 'qr-code.svg');
+                showStatus('SVG downloaded.');
+                handleDownload('svg');
+            });
+
+            /*
+             * Copy and Share are offered only where the browser can do them,
+             * so nobody is shown a button that cannot work.
+             */
+            const canCopy = !!(navigator.clipboard && typeof navigator.clipboard.write === 'function' && typeof window.ClipboardItem === 'function');
+
+            function canShareFiles() {
+                try {
+                    return typeof navigator.share === 'function'
+                        && typeof navigator.canShare === 'function'
+                        && navigator.canShare({ files: [new File([''], 'qr-code.png', { type: 'image/png' })] });
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            copyButton.hidden = !canCopy;
+            shareButton.hidden = !canShareFiles();
+
+            copyButton.addEventListener('click', async function () {
+                try {
+                    await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob(pixelsWide()) })]);
+                    showStatus('Copied as an image.');
+                } catch (e) {
+                    showStatus('Your browser would not copy the image. Download it instead.');
+                }
+            });
+
+            shareButton.addEventListener('click', async function () {
+                try {
+                    const file = new File([await pngBlob(pixelsWide())], 'qr-code.png', { type: 'image/png' });
+
+                    await navigator.share({ files: [file], title: 'My QR code' });
+                } catch (e) {
+                    if (e && e.name !== 'AbortError') {
+                        showStatus('Sharing did not work here. Download it instead.');
+                    }
+                }
+            });
+
+            document.querySelectorAll('.eq-step').forEach(function (step) {
+                step.addEventListener('click', function () {
+                    showStep(step.dataset.step);
+                });
+            });
+
+            nextButton.addEventListener('click', function () {
+                showStep('download');
+            });
+
+            backButton.addEventListener('click', function () {
+                showStep('look');
+            });
+
+            form.addEventListener('submit', function (event) {
+                event.preventDefault();
+            });
+
+            input.addEventListener('input', draw);
+
+            showStep('look');
+            draw();
         })();
     </script>
 @endPushOnce

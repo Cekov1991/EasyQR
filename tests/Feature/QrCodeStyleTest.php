@@ -201,16 +201,18 @@ class QrCodeStyleTest extends TestCase
         $this->assertCount(count(QrCode::QR_STYLES), array_unique($samples));
     }
 
-    public function test_the_instant_landing_page_code_uses_the_default_style(): void
+    /**
+     * The homepage no longer asks the server for a code, so there is no server
+     * default to hold it to: the editor opens on the Rounded Look, which the
+     * renderer's tests (tests/js) pin as the default Design.
+     */
+    public function test_the_homepage_no_longer_asks_the_server_for_a_code(): void
     {
-        $response = $this->postJson(route('qr.instant'), ['url' => self::CONTENT]);
+        $this->postJson('/qr/instant', ['url' => self::CONTENT])->assertNotFound();
 
-        $response->assertOk();
-
-        $expected = 'data:image/png;base64,'.base64_encode(
-            $this->render(['style' => QrCode::DEFAULT_STYLE, 'size' => 600])
-        );
-
-        $this->assertSame($expected, $response->json('png'));
+        $this->get('/')
+            ->assertOk()
+            ->assertDontSee('/qr/instant', false)
+            ->assertSee('QrRenderer.defaultDesign()', false);
     }
 }

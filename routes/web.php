@@ -3,7 +3,6 @@
 use App\Http\Controllers\AbuseReportController;
 use App\Http\Controllers\AgentaOsWebhookController;
 use App\Http\Controllers\CrawlerController;
-use App\Http\Controllers\InstantQrController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QrCodeRedirectController;
 use App\Http\Controllers\SiteEventController;
@@ -11,7 +10,7 @@ use App\Http\Controllers\SubscriptionController;
 use App\Support\LandingPages;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', [InstantQrController::class, 'index'])->name('welcome');
+Route::view('/', 'home')->name('welcome');
 
 /*
  * What crawlers fetch before anything else. Routes rather than files in public/
@@ -24,27 +23,22 @@ Route::get('robots.txt', [CrawlerController::class, 'robots'])->name('crawlers.r
 Route::get('sitemap.xml', [CrawlerController::class, 'sitemap'])->name('crawlers.sitemap');
 Route::get('llms.txt', [CrawlerController::class, 'llms'])->name('crawlers.llms');
 
-Route::post('/qr/instant', [InstantQrController::class, 'generate'])
-    ->middleware('throttle:20,1')
-    ->name('qr.instant');
-
 /*
- * Where the page reports the things only it can see: a download of the static
- * code, and the subscription offer being shown, dismissed or clicked. See
- * SiteEventController for why these four cannot be counted server-side, and
- * LogSiteEventRequest for why it accepts nothing else.
+ * Where the page reports the things only it can see: a static code being drawn
+ * (the link never leaves the browser, so there is no request to count it from),
+ * a download of it, and the subscription offer being shown, dismissed or
+ * clicked. See SiteEventController for why these cannot be counted server-side,
+ * and LogSiteEventRequest for why it accepts nothing else.
  *
  * Inside the web group, so a valid CSRF token is required. That is not a
  * security boundary here — there is nothing to protect a visitor from — but it
  * does mean a forged count has to come from something that first loaded a page
  * of ours, which rules out the cheapest kind of noise.
  *
- * The ceiling is sized for real use, not for the generator's own abuse cap. A
- * visit produces one or two codes, so at most a handful of these a minute (two
- * downloads, an offer shown, an offer acted on). Thirty leaves that sevenfold
- * headroom while keeping the forgeable surface a third the size of the ceiling
- * you get by multiplying the generator's 20-a-minute limit by four — which
- * sizes the endpoint for a flood rather than for a person.
+ * The ceiling is sized for real use. A visit sends one count for the code drawn,
+ * and then at most a handful a minute (two downloads, an offer shown, an offer
+ * acted on). Thirty leaves that several times over while sizing the endpoint
+ * for a person rather than for a flood.
  */
 Route::post('/events', [SiteEventController::class, 'store'])
     ->middleware('throttle:30,1')

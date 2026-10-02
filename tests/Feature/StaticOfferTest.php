@@ -39,16 +39,29 @@ class StaticOfferTest extends TestCase
         $this->get('/')->assertOk();
     }
 
-    public function test_the_generator_returns_both_formats_as_data_uris(): void
+    /**
+     * The code is drawn and downloaded in the browser now, so there is no
+     * server endpoint that makes one: the link goes nowhere.
+     */
+    public function test_there_is_no_server_endpoint_that_makes_a_code(): void
     {
-        $this->postJson(route('qr.instant'), ['url' => 'https://example.com'])
-            ->assertOk()
-            ->assertJsonStructure(['png', 'svg']);
+        $this->postJson('/qr/instant', ['url' => 'https://example.com'])->assertNotFound();
+    }
 
-        $data = $this->postJson(route('qr.instant'), ['url' => 'https://example.com'])->json();
+    /**
+     * A download is a click in the browser, and the offer follows it. Both
+     * formats start the same hand-off.
+     */
+    public function test_both_downloads_report_themselves_and_then_open_the_offer(): void
+    {
+        $content = $this->get('/')->assertOk()->getContent();
 
-        $this->assertStringStartsWith('data:image/png;base64,', $data['png']);
-        $this->assertStringStartsWith('data:image/svg+xml;base64,', $data['svg']);
+        $this->assertStringContainsString("handleDownload('png')", $content);
+        $this->assertStringContainsString("handleDownload('svg')", $content);
+        $this->assertMatchesRegularExpression(
+            '/function handleDownload\(format\) \{\s*logEvent\(\'qr_downloaded\', \{ format: format \}\);\s*window\.setTimeout\(revealOffer, REVEAL_DELAY_MS\);/',
+            $content,
+        );
     }
 
     public function test_the_offer_is_in_the_markup_for_a_visitor(): void

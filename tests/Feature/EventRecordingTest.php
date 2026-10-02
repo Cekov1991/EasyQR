@@ -38,22 +38,38 @@ class EventRecordingTest extends TestCase
         );
     }
 
-    public function test_generating_a_static_code_is_counted(): void
+    public function test_drawing_a_static_code_is_counted_when_the_page_reports_it(): void
     {
-        $this->postJson(route('qr.instant'), ['url' => 'https://example.com'])
-            ->assertOk();
+        $this->postJson(route('events.log'), ['event' => TrackedEvent::StaticQrGenerated->value])
+            ->assertNoContent();
 
         $this->assertRecordedOnce(TrackedEvent::StaticQrGenerated);
     }
 
     /**
      * The count is the denominator for the whole funnel, so it must follow real
-     * generations rather than mere attempts.
+     * drawings rather than mere attempts: the page reports it only from the
+     * place that has just drawn a valid link, and only the first time.
      */
-    public function test_a_rejected_url_is_not_counted_as_a_generated_code(): void
+    public function test_the_page_reports_a_drawn_code_once_and_only_after_drawing_it(): void
     {
-        $this->postJson(route('qr.instant'), ['url' => 'not-a-url'])
-            ->assertStatus(422);
+        $content = $this->get('/')->assertOk()->getContent();
+
+        $this->assertSame(1, substr_count($content, "logEvent('static_qr_generated')"));
+        $this->assertMatchesRegularExpression(
+            '/if \(!reportedGenerated\) \{\s*reportedGenerated = true;\s*logEvent\(\'static_qr_generated\'\);/',
+            $content,
+        );
+        $this->assertLessThan(
+            (int) strpos($content, "logEvent('static_qr_generated')"),
+            (int) strpos($content, 'drawn = QrRenderer.render('),
+            'The count must come after the code is drawn.',
+        );
+    }
+
+    public function test_loading_the_homepage_counts_nothing(): void
+    {
+        $this->get('/')->assertOk();
 
         $this->assertSame(0, SiteEvent::query()->count());
     }
@@ -149,7 +165,6 @@ class EventRecordingTest extends TestCase
     public function test_the_server_recorded_events_are_not_client_loggable(): void
     {
         foreach ([
-            TrackedEvent::StaticQrGenerated,
             TrackedEvent::CheckoutStarted,
             TrackedEvent::CheckoutCompleted,
             TrackedEvent::CheckoutAbandoned,

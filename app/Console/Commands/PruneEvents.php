@@ -20,7 +20,7 @@ use Illuminate\Support\Carbon;
  * every generated code rather than on every sale.
  *
  * Modelled closely on PruneScans, including the chunked deletes: `site_events`
- * is written on the instant-generator request path, and an unbounded DELETE
+ * is written on the public events endpoint, and an unbounded DELETE
  * would hold locks while the homepage queues up behind it.
  */
 class PruneEvents extends Command

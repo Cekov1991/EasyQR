@@ -524,6 +524,235 @@ textarea.eq-input {
     flex-wrap: wrap;
 }
 
+/* ------------------------------------------------------- steps editor ---- */
+
+/*
+ * The Steps editor: the link field in the hero, then the visitor's own code and
+ * a two-step wizard (Look, Download). One column, sized for a phone first, so it
+ * is the same shape at 375px as on a desktop.
+ */
+.eq-editor-wrap {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+}
+
+.eq-editor-link {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.eq-input--hero {
+    font-size: 17px;
+    padding: 16px 18px;
+    border-radius: var(--eq-radius-btn);
+}
+
+.eq-editor-message {
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--eq-muted);
+    margin: 0;
+    min-height: 20px;
+}
+
+.eq-editor-message[data-tone="error"] {
+    color: var(--eq-danger);
+}
+
+.eq-editor-promise {
+    font-size: 13px;
+    color: var(--eq-muted);
+    margin: 0;
+}
+
+.eq-editor[hidden] {
+    display: none;
+}
+
+.eq-editor {
+    width: 100%;
+    max-width: 440px;
+    background: var(--eq-surface);
+    border: 1px solid var(--eq-border);
+    border-radius: 28px;
+    padding: 20px;
+    box-shadow: 0 10px 40px rgba(10, 15, 36, 0.08);
+}
+
+.eq-steps {
+    list-style: none;
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    margin: 0 0 18px;
+    padding: 0;
+}
+
+.eq-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: 0;
+    padding: 6px 4px;
+    font-family: var(--eq-font-body);
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--eq-muted);
+    cursor: pointer;
+}
+
+.eq-step[aria-current="step"] {
+    color: var(--eq-ink);
+}
+
+.eq-step-number {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    background: #eef1f4;
+}
+
+.eq-step[aria-current="step"] .eq-step-number {
+    background: var(--eq-ink);
+    color: var(--eq-surface);
+}
+
+.eq-editor-preview {
+    width: 100%;
+    margin: 0 auto 18px;
+    padding: 12px;
+    border: 1px solid var(--eq-border);
+    border-radius: 20px;
+    background: var(--eq-surface);
+    transition: width 0.2s;
+}
+
+.eq-editor-preview.is-small {
+    width: 64%;
+}
+
+.eq-editor-preview svg {
+    display: block;
+}
+
+.eq-editor-hint {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--eq-muted);
+    margin: 0 0 10px;
+}
+
+.eq-looks {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.eq-look {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: 0;
+    padding: 0;
+    font-family: var(--eq-font-body);
+    cursor: pointer;
+}
+
+.eq-look-thumb {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    padding: 4px;
+    border-radius: 16px;
+    border: 2px solid transparent;
+    background: var(--eq-bg);
+    box-sizing: border-box;
+}
+
+.eq-look-thumb svg {
+    display: block;
+}
+
+.eq-look[aria-pressed="true"] .eq-look-thumb {
+    border-color: var(--eq-primary);
+}
+
+.eq-look-name {
+    font-size: 12.5px;
+    color: var(--eq-muted);
+}
+
+.eq-look[aria-pressed="true"] .eq-look-name {
+    color: var(--eq-ink);
+    font-weight: 600;
+}
+
+.eq-step:focus-visible,
+.eq-look:focus-visible,
+.eq-editor .eq-btn:focus-visible {
+    outline: 2px solid var(--eq-accent);
+    outline-offset: 2px;
+}
+
+.eq-editor-panel[hidden],
+.eq-editor .eq-btn[hidden] {
+    display: none;
+}
+
+.eq-editor-size {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+
+.eq-editor .eq-actions {
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.eq-editor-status {
+    font-size: 13px;
+    color: var(--eq-ink);
+    margin: 0 0 10px;
+    min-height: 18px;
+}
+
+.eq-editor-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.eq-editor-nav .eq-btn {
+    min-width: 110px;
+}
+
+.eq-editor-nav #static-next {
+    margin-left: auto;
+}
+
+.eq-editor-wrap > .eq-card-grid {
+    width: 100%;
+    margin-top: 28px;
+}
+
 /* -------------------------------------------------------- static offer ---- */
 
 /*
@@ -1020,6 +1249,15 @@ textarea.eq-input {
     .eq-result-panel {
         padding: 24px;
         gap: 24px;
+    }
+
+    .eq-editor {
+        padding: 16px;
+        border-radius: 22px;
+    }
+
+    .eq-looks {
+        gap: 6px;
     }
 
     .eq-offer {
