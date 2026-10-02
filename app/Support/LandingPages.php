@@ -156,7 +156,12 @@ class LandingPages
                 h1: 'A QR code for your real estate sign',
                 keyword: 'real estate sign qr code',
                 related: ['flyer-poster-qr-code', 'business-card-qr-code', 'fix-printed-qr-code'],
-                faq: [],
+                faq: [
+                    self::signFollowsTheProperty(),
+                    self::whichSignWasScanned(),
+                    'more-codes',
+                    'printing',
+                ],
                 published: false,
             ),
             new LandingPage(
@@ -166,7 +171,12 @@ class LandingPages
                 h1: 'A QR code for your business card',
                 keyword: 'qr code for business card',
                 related: ['real-estate-qr-code', 'event-qr-code', 'flyer-poster-qr-code'],
-                faq: [],
+                faq: [
+                    self::whatTheCardShouldOpen(),
+                    self::changingJobs(),
+                    'edit-after-printing',
+                    'logo-and-colour',
+                ],
                 published: false,
             ),
             new LandingPage(
@@ -176,7 +186,12 @@ class LandingPages
                 h1: 'A QR code for your event or wedding',
                 keyword: 'qr code for event',
                 related: ['flyer-poster-qr-code', 'business-card-qr-code', 'restaurant-menu-qr-code'],
-                faq: [],
+                faq: [
+                    self::subscribeForOneEvent(),
+                    self::afterTheEvent(),
+                    'free-trial',
+                    'cancelling',
+                ],
                 published: false,
             ),
             new LandingPage(
@@ -186,7 +201,12 @@ class LandingPages
                 h1: 'A QR code for your flyer or poster',
                 keyword: 'qr code for flyer',
                 related: ['event-qr-code', 'real-estate-qr-code', 'product-packaging-qr-code'],
-                faq: [],
+                faq: [
+                    self::codePerBatch(),
+                    self::whenTheCampaignEnds(),
+                    'scan-data',
+                    'more-codes',
+                ],
                 published: false,
             ),
             new LandingPage(
@@ -196,7 +216,12 @@ class LandingPages
                 h1: 'A QR code on your product packaging',
                 keyword: 'qr code on packaging',
                 related: ['fix-printed-qr-code', 'flyer-poster-qr-code', 'restaurant-menu-qr-code'],
-                faq: [],
+                faq: [
+                    self::codePerProduct(),
+                    'more-codes',
+                    self::staticOnPackaging(),
+                    'static-to-dynamic',
+                ],
                 published: false,
             ),
             new LandingPage(
@@ -206,7 +231,12 @@ class LandingPages
                 h1: 'A QR code for Google reviews',
                 keyword: 'qr code for google reviews',
                 related: ['free-qr-code-no-expiration', 'restaurant-menu-qr-code', 'business-card-qr-code'],
-                faq: [],
+                faq: [
+                    self::findTheReviewLink(),
+                    self::reviewLinkAfterAMove(),
+                    self::askingForReviews(),
+                    'printing',
+                ],
                 published: false,
             ),
         ];
@@ -595,6 +625,290 @@ class LandingPages
                     do not host the file, so put it on your website or a file-sharing service first and
                     copy the link from there. A plain web page reads better on a phone than a PDF does,
                     but a PDF is a fine place to start.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * An agent owns a few signs and many listings, so the first question is
+     * whether a sign's code can move with it.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function signFollowsTheProperty(): array
+    {
+        return [
+            'id' => 'sign-follows-the-property',
+            'question' => 'Can one sign be used for property after property?',
+            'answer' => <<<'HTML'
+                <p>
+                    Yes, if the code on it is dynamic. Give each sign its own code and, when the sign goes
+                    up outside a new property, change that code to the new listing. It takes a minute on
+                    your phone. Do it before the sign goes in the ground, so the first passer-by to scan
+                    it does not land on a house that has already sold.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * What an agent wants from the scans: proof of which sign is working.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function whichSignWasScanned(): array
+    {
+        return [
+            'id' => 'which-sign-was-scanned',
+            'question' => 'Can I see which of my signs people scan?',
+            'answer' => <<<'HTML'
+                <p>
+                    Yes, as long as each sign carries its own dynamic code. Every code counts its own
+                    scans, with the date and time, so you can tell a busy corner from a quiet street. We
+                    do not know who scanned, and you will not get a name or a phone number from a scan.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * The card is printed in hundreds, so the choice of destination matters
+     * more than the choice of code.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function whatTheCardShouldOpen(): array
+    {
+        return [
+            'id' => 'what-the-card-opens',
+            'question' => 'What should the code on my business card open?',
+            'answer' => <<<'HTML'
+                <p>
+                    One page that says who you are and how to reach you: a profile, a page on your
+                    company's site, or a short page of your own with your number and email on it. Pick
+                    the page someone would want a week after meeting you. A link that only works while
+                    you are logged in, or a file in your own cloud folder, is a poor choice for a card.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * The moment a business card code is most likely to go wrong.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function changingJobs(): array
+    {
+        return [
+            'id' => 'changing-jobs',
+            'question' => 'What happens to the code on my cards when I change jobs?',
+            'answer' => <<<'HTML'
+                <p>
+                    A static code keeps opening the old page, which may be your old employer's site and
+                    may soon be gone. A dynamic code can be pointed at your new profile the same day, so
+                    the cards you already handed out lead to you rather than to the desk you left. Make
+                    the code in an account of your own, not your employer's, so it moves with you.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * Couples and organisers need a code for months, not years, and want to
+     * know what that costs.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function subscribeForOneEvent(): array
+    {
+        $trialDays = (int) config('subscription.trial_days');
+
+        return [
+            'id' => 'subscribe-for-one-event',
+            'question' => 'Do I have to subscribe for a single event?',
+            'answer' => <<<HTML
+                <p>
+                    Only for the months between printing and the day itself. The {$trialDays}-day trial
+                    lets you make the code and check it on the proof, but invitations usually go out
+                    months ahead, so plan on the monthly plan from when they are sent until the event is
+                    over. Then cancel. If nothing about the event will ever change, a free static code
+                    is enough.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * The honest end of an event code: it stops, unless it is kept.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function afterTheEvent(): array
+    {
+        $graceDays = (int) config('subscription.grace_days');
+
+        return [
+            'id' => 'after-the-event',
+            'question' => 'What happens to the code after the event?',
+            'answer' => <<<HTML
+                <p>
+                    That is up to you. Point it at the photo album and keep it, and guests who find the
+                    invitation in a drawer will find the photos too. Or cancel, and {$graceDays} days
+                    after your paid period ends the code shows a plain notice that it is not active.
+                    Nobody who scans it is asked to pay.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * A campaign prints thousands of copies, and the first worry is that
+     * each one needs a code of its own.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function codePerBatch(): array
+    {
+        $dynamic = (int) config('subscription.quotas.dynamic');
+
+        return [
+            'id' => 'code-per-batch',
+            'question' => 'Do I need a different code on every flyer?',
+            'answer' => <<<HTML
+                <p>
+                    No. Every copy of a batch carries the same code. You need a separate code only for
+                    each group you want to compare: one for the flyers at the station and one for the
+                    posters in shops, say. A subscription covers {$dynamic} dynamic codes, so decide on
+                    the groups before you send the files to the printer.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * Posters stay on walls long after the date on them has passed.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function whenTheCampaignEnds(): array
+    {
+        return [
+            'id' => 'when-the-campaign-ends',
+            'question' => 'What should the code open once the campaign is over?',
+            'answer' => <<<'HTML'
+                <p>
+                    Something that is still true. Posters stay up for months after an event, and flyers
+                    turn up in coat pockets. Point the code at your next event, or at a page that says
+                    the offer has ended and what you have now. That is better than a page that has gone,
+                    and it puts the people still scanning to use.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * A brand with many products has to decide how many codes to print
+     * before the artwork is signed off.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function codePerProduct(): array
+    {
+        $dynamic = (int) config('subscription.quotas.dynamic');
+
+        return [
+            'id' => 'code-per-product',
+            'question' => 'One code per product, or one for the whole range?',
+            'answer' => <<<HTML
+                <p>
+                    One per product when each one needs its own page, such as instructions, ingredients
+                    or a recall notice. One for the range when every pack opens the same place. A
+                    subscription covers {$dynamic} dynamic codes, so a long range needs more, and the
+                    question below says how to get them.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * Static is free, so the page says when it is the right call on a pack.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function staticOnPackaging(): array
+    {
+        return [
+            'id' => 'static-on-packaging',
+            'question' => 'Is a static code ever right on packaging?',
+            'answer' => <<<'HTML'
+                <p>
+                    Yes, if it opens an address on your own domain that you promise to keep, and you can
+                    redirect that address when the page behind it moves. Plenty of brands do this. The
+                    risk is the day the site is rebuilt and nobody remembers the address on the box.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * The one step of this page that happens outside our site.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function findTheReviewLink(): array
+    {
+        return [
+            'id' => 'find-the-review-link',
+            'question' => 'Where do I find my Google review link?',
+            'answer' => <<<'HTML'
+                <p>
+                    In your Google Business Profile. Sign in to the account that manages your business,
+                    open your profile, and look for the option to ask for reviews. It gives you a short
+                    link to copy. Open the link on your phone once, to check it lands on your review form,
+                    then paste it into the generator above.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * Why the free code is enough: the link belongs to the profile.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function reviewLinkAfterAMove(): array
+    {
+        return [
+            'id' => 'review-link-after-a-move',
+            'question' => 'Will the code still work if we move or rename the business?',
+            'answer' => <<<'HTML'
+                <p>
+                    Usually, yes. The review link belongs to your Business Profile, not to your street
+                    address or your name, so it stays the same as long as you update that profile rather
+                    than start a new one. If you ever do start a new profile, print a new code for it.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * The one rule a business can break with a review code, which is Google's
+     * rule rather than ours.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function askingForReviews(): array
+    {
+        return [
+            'id' => 'asking-for-reviews',
+            'question' => 'Can I offer a discount for a review?',
+            'answer' => <<<'HTML'
+                <p>
+                    No. Google's rules do not allow rewards for reviews, and reviews bought that way can be
+                    removed. Asking is fine. A code by the till with a plain line, such as "Enjoyed your
+                    visit? Tell others", is all it takes.
                 </p>
                 HTML,
         ];

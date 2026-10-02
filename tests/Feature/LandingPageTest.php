@@ -152,6 +152,28 @@ class LandingPageTest extends TestCase
             'no subscription' => ['qr-code-without-subscription'],
             'fix printed' => ['fix-printed-qr-code'],
             'restaurant menu' => ['restaurant-menu-qr-code'],
+            'real estate' => ['real-estate-qr-code'],
+            'business card' => ['business-card-qr-code'],
+            'event' => ['event-qr-code'],
+            'flyer or poster' => ['flyer-poster-qr-code'],
+            'packaging' => ['product-packaging-qr-code'],
+            'google review' => ['google-review-qr-code'],
+        ];
+    }
+
+    /**
+     * The use cases that realistically need more dynamic codes than a
+     * subscription covers: a sign per property, a code per batch, a code per
+     * product line.
+     *
+     * @return array<string, array{0: string}>
+     */
+    public static function pageThatOutgrowsTheQuotaProvider(): array
+    {
+        return [
+            'real estate' => ['real-estate-qr-code'],
+            'flyer or poster' => ['flyer-poster-qr-code'],
+            'packaging' => ['product-packaging-qr-code'],
         ];
     }
 
@@ -335,6 +357,51 @@ class LandingPageTest extends TestCase
 
         $this->assertNotNull($offers->firstWhere('price', '7.50'));
         $this->assertNotNull($offers->firstWhere('price', '62.00'));
+    }
+
+    /**
+     * A page for a case that needs many codes says how many a subscription
+     * covers and how to get more, and both follow config: the Quota, and the
+     * address the larger-quota offer sends people to.
+     */
+    #[DataProvider('pageThatOutgrowsTheQuotaProvider')]
+    public function test_a_page_that_needs_many_codes_states_the_quota_and_the_way_past_it(string $slug): void
+    {
+        config([
+            'subscription.quotas.dynamic' => 13,
+            'site.support_email' => 'codes@example.test',
+        ]);
+
+        $this->publishLandingPage($slug);
+
+        $this->assertContains('more-codes', LandingPages::find($slug)->faq, "{$slug} does not make the larger-quota offer.");
+
+        $html = $this->get('/'.$slug)->assertOk()->getContent();
+
+        $start = strpos($html, '<div class="eq-prose">');
+        $end = strpos($html, '<div class="eq-table-scroll">', $start);
+        $ownCopy = preg_replace('~\s+~', ' ', strip_tags(substr($html, $start, $end - $start)));
+
+        $this->assertStringContainsString('13 dynamic codes', $ownCopy, "{$slug} does not state the Quota in its own copy.");
+        $this->assertStringContainsString('more than 13 dynamic codes', $html);
+        $this->assertStringContainsString('mailto:codes@example.test', $html);
+        $this->assertStringNotContainsString('5 dynamic', strip_tags($html));
+    }
+
+    /**
+     * A review link never changes, so the honest answer on this page is the
+     * free one, and it is the first thing the page says.
+     */
+    public function test_the_google_review_page_answers_with_a_static_code(): void
+    {
+        $this->publishLandingPage('google-review-qr-code');
+
+        $html = $this->get('/google-review-qr-code')->assertOk()->getContent();
+
+        $this->assertSame(1, preg_match('~<p class="eq-lead">(.*?)</p>~s', $html, $lead), 'The page has no answer under its H1.');
+
+        $this->assertStringContainsString('static', strtolower($lead[1]));
+        $this->assertStringContainsString('free', strtolower($lead[1]));
     }
 
     /**
