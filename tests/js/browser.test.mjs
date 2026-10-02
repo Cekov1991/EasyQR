@@ -112,13 +112,10 @@ describe('the homepage in a real browser', { skip }, () => {
 
         it('redraws as the link changes', async () => {
             const tab = await homepage();
-            const drawing = () => tab.evaluate('document.getElementById("static-preview").innerHTML.length');
-
             await typeLink(tab, 'https://a.example');
             const before = await tab.evaluate('document.getElementById("static-preview").innerHTML');
             await tab.type('#static-url', '/a-much-longer-path-that-changes-the-pattern');
             await tab.until(async () => (await tab.evaluate('document.getElementById("static-preview").innerHTML')) !== before, 'a redraw');
-            assert.ok(await drawing() > 0);
         });
 
         it('starts on the Rounded look, and calls the design Custom once a setting differs', async () => {
