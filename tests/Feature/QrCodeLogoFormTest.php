@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Filament\Resources\QrCodeResource\Pages\CreateQrCode;
-use App\Filament\Resources\QrCodeResource\Pages\ViewQrCode;
 use App\Models\QrCode;
 use App\Models\User;
 use Filament\Facades\Filament;
@@ -13,7 +12,6 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
-use ZipArchive;
 
 class QrCodeLogoFormTest extends TestCase
 {
@@ -50,28 +48,6 @@ class QrCodeLogoFormTest extends TestCase
         imagedestroy($image);
 
         return $bytes;
-    }
-
-    private function countsRedPixels(string $png): int
-    {
-        $image = imagecreatefromstring($png);
-        $this->assertNotFalse($image, 'The render is not a decodable image.');
-
-        $count = 0;
-
-        for ($y = 0; $y < imagesy($image); $y++) {
-            for ($x = 0; $x < imagesx($image); $x++) {
-                $colour = imagecolorat($image, $x, $y);
-
-                if ((($colour >> 16) & 0xFF) >= 200 && (($colour >> 8) & 0xFF) <= 60 && ($colour & 0xFF) <= 60) {
-                    $count++;
-                }
-            }
-        }
-
-        imagedestroy($image);
-
-        return $count;
     }
 
     /**
@@ -144,31 +120,19 @@ class QrCodeLogoFormTest extends TestCase
             });
     }
 
-    /**
-     * The renderer forces PNG and high error correction regardless, so the
-     * lock exists to stop the form promising something it will not honour.
-     */
-    public function test_the_format_and_error_correction_fields_lock_once_a_logo_is_uploaded(): void
+    public function test_the_old_format_and_error_correction_fields_no_longer_exist(): void
     {
-        $page = Livewire::actingAs(User::factory()->create())
+        Livewire::actingAs(User::factory()->create())
             ->test(CreateQrCode::class)
-            ->assertFormFieldIsEnabled('options.format')
-            ->assertFormFieldIsEnabled('options.errorCorrection');
-
-        $page->fillForm(['options' => ['logo_path' => $this->pendingUpload()]])
-            ->assertFormFieldIsDisabled('options.format')
-            ->assertFormFieldIsDisabled('options.errorCorrection');
+            ->assertFormFieldDoesNotExist('options.format')
+            ->assertFormFieldDoesNotExist('options.errorCorrection');
     }
 
-    public function test_creating_with_a_logo_persists_the_path_and_merges_the_image(): void
+    public function test_creating_with_a_logo_persists_the_path_and_writes_no_image(): void
     {
         $user = User::factory()->create();
 
         $qrCode = $this->createThroughTheForm($user, [
-            'style' => 'round',
-            'format' => 'png',
-            'size' => 300,
-            'errorCorrection' => 'M',
             'logo_path' => $this->pendingUpload(),
         ]);
 
@@ -176,55 +140,16 @@ class QrCodeLogoFormTest extends TestCase
         $this->assertStringStartsWith('qr-logos/', $qrCode->options['logo_path']);
         Storage::assertExists($qrCode->options['logo_path']);
 
-        $this->assertGreaterThan(0, $this->countsRedPixels(Storage::get($qrCode->qr_code_image)));
+        $this->assertNull($qrCode->qr_code_image);
+        $this->assertSame([$qrCode->options['logo_path']], Storage::allFiles());
     }
 
-    public function test_a_submitted_svg_format_still_yields_a_png_when_a_logo_is_set(): void
+    public function test_a_code_created_without_a_logo_has_no_logo_path(): void
     {
         $user = User::factory()->create();
 
-        $qrCode = $this->createThroughTheForm($user, [
-            'style' => 'round',
-            'format' => 'svg',
-            'size' => 300,
-            'errorCorrection' => 'M',
-            'logo_path' => $this->pendingUpload(),
-        ]);
+        $qrCode = $this->createThroughTheForm($user, []);
 
-        $this->assertSame('png', $qrCode->options['format']);
-        $this->assertStringEndsWith('.png', $qrCode->qr_code_image);
-        $this->assertStringStartsWith("\x89PNG", Storage::get($qrCode->qr_code_image));
-    }
-
-    public function test_a_submitted_medium_error_correction_still_yields_high_when_a_logo_is_set(): void
-    {
-        $user = User::factory()->create();
-
-        $qrCode = $this->createThroughTheForm($user, [
-            'style' => 'round',
-            'format' => 'png',
-            'size' => 300,
-            'errorCorrection' => 'M',
-            'logo_path' => $this->pendingUpload(),
-        ]);
-
-        $this->assertSame('H', $qrCode->options['errorCorrection']);
-    }
-
-    public function test_a_code_created_without_a_logo_keeps_its_chosen_format_and_error_correction(): void
-    {
-        $user = User::factory()->create();
-
-        $qrCode = $this->createThroughTheForm($user, [
-            'style' => 'round',
-            'format' => 'svg',
-            'size' => 300,
-            'errorCorrection' => 'L',
-        ]);
-
-        $this->assertSame('svg', $qrCode->options['format']);
-        $this->assertSame('L', $qrCode->options['errorCorrection']);
-        $this->assertStringEndsWith('.svg', $qrCode->qr_code_image);
         $this->assertTrue(blank($qrCode->options['logo_path'] ?? null));
         $this->assertFalse(QrCode::hasLogo($qrCode->options));
     }

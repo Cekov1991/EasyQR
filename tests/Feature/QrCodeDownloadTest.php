@@ -67,7 +67,10 @@ class QrCodeDownloadTest extends TestCase
 
     private function forgetStoredImage(QrCode $record): void
     {
-        Storage::delete($record->qr_code_image);
+        if ($record->qr_code_image !== null) {
+            Storage::delete($record->qr_code_image);
+        }
+
         DB::table('qr_codes')->where('id', $record->id)->update(['qr_code_image' => null]);
     }
 
@@ -193,11 +196,22 @@ class QrCodeDownloadTest extends TestCase
 
     public function test_the_copies_filament_serves_are_the_current_renderer_files(): void
     {
-        foreach (['qrcode-generator', 'qr-frame-font', 'qr-renderer', 'qr-drawing', 'qr-download'] as $file) {
+        foreach (['qrcode-generator', 'qr-frame-font', 'qr-renderer', 'qr-drawing', 'qr-download', 'qr-design-controls', 'qr-design-editor'] as $file) {
             $this->assertFileEquals(
                 public_path("js/{$file}.js"),
                 public_path("js/app/{$file}.js"),
                 "public/js/app/{$file}.js is stale. Run php artisan filament:assets, then restore public/css/filament and public/js/filament.",
+            );
+        }
+    }
+
+    public function test_the_copies_filament_serves_are_the_current_editor_styles(): void
+    {
+        foreach (['qr-design-controls', 'qr-design-editor'] as $file) {
+            $this->assertFileEquals(
+                public_path("css/{$file}.css"),
+                public_path("css/app/{$file}.css"),
+                "public/css/app/{$file}.css is stale. Run php artisan filament:assets, then restore public/css/filament and public/js/filament.",
             );
         }
     }

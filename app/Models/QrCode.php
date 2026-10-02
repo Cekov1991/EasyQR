@@ -131,26 +131,24 @@ class QrCode extends Model
                 $qrCode->content = route('qr.redirect', $qrCode->short_url);
             }
 
-            // Generate QR code image
-            $qrCode->generateQrCode();
+            // A code that carries a Design is drawn in the browser (ADR-0005); only
+            // a code from before the Design gets a stored image.
+            if (! static::hasDesign($qrCode->options ?? [])) {
+                $qrCode->generateQrCode();
+            }
         });
 
         static::updating(function ($qrCode) {
-            // Static QR codes should be completely immutable
-            if ($qrCode->type === 'static') {
+            // What a printed code encodes can never change, so a Static code only
+            // lets its name and its Design move.
+            if ($qrCode->type === 'static' && array_diff(array_keys($qrCode->getDirty()), ['name', 'options']) !== []) {
                 throw new \Exception('Static QR codes cannot be updated after creation to preserve printed codes.');
             }
 
-            // Dynamic QR codes: allow content updates but never regenerate the QR code itself
-            if ($qrCode->type === 'dynamic') {
-                // Allow updating destination_url and qr_content_data
-                // But prevent changes that would regenerate the QR code image
-                if ($qrCode->isDirty(['content', 'options', 'qr_code_path', 'qr_code_image'])) {
-                    throw new \Exception('QR code image cannot be changed after creation to preserve printed codes.');
-                }
-
-                // Content updates are fine for dynamic codes since they go through your backend
-                // No need to regenerate anything - just update the database
+            // Dynamic QR codes: the destination may change, but never the Short URL
+            // or the content the printed image encodes. Restyling is a Design change.
+            if ($qrCode->type === 'dynamic' && $qrCode->isDirty(['content', 'short_url', 'qr_code_path', 'qr_code_image'])) {
+                throw new \Exception('QR code image cannot be changed after creation to preserve printed codes.');
             }
         });
 
@@ -603,6 +601,23 @@ class QrCode extends Model
         }
 
         $this->qr_code_image = $filename;
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    public static function hasDesign(array $options): bool
+    {
+        return is_array($options['design'] ?? null);
+    }
+
+    /**
+     * Picks a Short URL no code has, for a form to hold from the moment it opens
+     * until the code is saved.
+     */
+    public static function reserveShortUrl(): string
+    {
+        return static::generateUniqueShortUrl();
     }
 
     protected static function generateUniqueShortUrl(int $length = 8): string

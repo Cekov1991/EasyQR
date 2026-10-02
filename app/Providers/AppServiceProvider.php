@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Services\AgentaOS\AgentaOsClient;
+use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
 use Filament\Support\Facades\FilamentView;
@@ -43,10 +44,16 @@ class AppServiceProvider extends ServiceProvider
      */
     private function registerQrRenderer(): void
     {
-        FilamentAsset::register(array_map(
-            fn (string $file): Js => Js::make($file, public_path("js/{$file}.js")),
-            ['qrcode-generator', 'qr-frame-font', 'qr-renderer', 'qr-drawing', 'qr-download'],
-        ));
+        FilamentAsset::register([
+            ...array_map(
+                fn (string $file): Js => Js::make($file, public_path("js/{$file}.js")),
+                ['qrcode-generator', 'qr-frame-font', 'qr-renderer', 'qr-drawing', 'qr-download', 'qr-design-controls', 'qr-design-editor'],
+            ),
+            ...array_map(
+                fn (string $file): Css => Css::make($file, public_path("css/{$file}.css")),
+                ['qr-design-controls', 'qr-design-editor'],
+            ),
+        ]);
 
         FilamentView::registerRenderHook(
             PanelsRenderHook::SCRIPTS_BEFORE,

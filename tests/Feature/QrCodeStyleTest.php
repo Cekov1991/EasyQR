@@ -2,13 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Filament\Resources\QrCodeResource\Pages\CreateQrCode;
 use App\Models\QrCode;
-use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
-use Livewire\Livewire;
 use SimpleSoftwareIO\QrCode\Facades\QrCode as QrCodeGenerator;
 use Tests\TestCase;
 
@@ -128,31 +125,6 @@ class QrCodeStyleTest extends TestCase
         $this->assertNotSame($this->render(['style' => 'square']), $stored);
     }
 
-    public function test_a_chosen_style_is_persisted_and_used_for_the_stored_image(): void
-    {
-        $user = User::factory()->create();
-        $this->actingAs($user);
-
-        Livewire::test(CreateQrCode::class)
-            ->fillForm([
-                'name' => 'Dotted code',
-                'type' => 'static',
-                'qr_content_type' => 'website',
-                'qr_content_data' => ['url' => self::CONTENT],
-                'options' => ['style' => 'dot', 'format' => 'png', 'size' => 300, 'errorCorrection' => 'M'],
-            ])
-            ->call('create')
-            ->assertHasNoFormErrors();
-
-        $qrCode = $user->qrCodes()->sole();
-
-        $this->assertSame('dot', $qrCode->options['style']);
-        $this->assertSame(
-            $this->render(['style' => 'dot']),
-            Storage::get($qrCode->qr_code_image),
-        );
-    }
-
     /**
      * The zip of alternate formats used to drop the record's colour, so the
      * PNG inside it did not match its SVG and EPS siblings.
@@ -166,31 +138,6 @@ class QrCodeStyleTest extends TestCase
 
         $this->assertNotSame($black, $red);
         $this->assertStringContainsStringIgnoringCase('ff0000', $red);
-    }
-
-    /**
-     * Every style a person can pick in the form is kept on the code. The picker's
-     * markup is not asserted: choosing is the behaviour, and storing is its result.
-     */
-    public function test_every_style_the_form_offers_can_be_chosen_and_is_kept(): void
-    {
-        $user = User::factory()->create();
-        $this->actingAs($user);
-
-        foreach (array_keys(QrCode::QR_STYLES) as $style) {
-            Livewire::test(CreateQrCode::class)
-                ->fillForm([
-                    'name' => "Code in {$style}",
-                    'type' => 'static',
-                    'qr_content_type' => 'website',
-                    'qr_content_data' => ['url' => self::CONTENT],
-                    'options' => ['style' => $style, 'format' => 'png', 'size' => 300, 'errorCorrection' => 'M'],
-                ])
-                ->call('create')
-                ->assertHasNoFormErrors();
-
-            $this->assertSame($style, $user->qrCodes()->where('name', "Code in {$style}")->sole()->options['style']);
-        }
     }
 
     public function test_each_style_sample_is_a_distinct_inline_svg(): void
