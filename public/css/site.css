@@ -748,6 +748,78 @@ textarea.eq-input {
     margin-left: auto;
 }
 
+/* The scan check beside the preview, the Look indicator and the extra controls. */
+.eq-editor-notices {
+    list-style: none;
+    margin: -6px 0 14px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.eq-editor-notices:empty {
+    display: none;
+}
+
+.eq-editor-notices li {
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: #fff6e0;
+    color: #6b4a00;
+}
+
+.eq-editor-notices li[data-tone="blocked"] {
+    background: #fdecea;
+    color: #8a1d14;
+    font-weight: 600;
+}
+
+.eq-editor-blocked {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #fdecea;
+    color: #8a1d14;
+    font-size: 13.5px;
+    line-height: 1.5;
+}
+
+.eq-editor-look {
+    margin: 12px 0 0;
+    font-size: 13px;
+    color: var(--eq-muted);
+}
+
+.eq-editor-look strong {
+    color: var(--eq-ink);
+}
+
+.eq-more {
+    margin-top: 14px;
+    border-top: 1px solid var(--eq-border);
+    padding-top: 12px;
+}
+
+.eq-more summary {
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 4px 0;
+}
+
+.eq-more summary:focus-visible {
+    outline: 2px solid var(--eq-accent);
+    outline-offset: 2px;
+}
+
+.eq-editor .eq-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 .eq-editor-wrap > .eq-card-grid {
     width: 100%;
     margin-top: 28px;

@@ -47,13 +47,104 @@ class StaticGeneratorTest extends TestCase
             ->assertSee('Your QR code appears here as soon as you type a link.');
     }
 
-    public function test_the_wizard_is_look_then_download_and_nothing_more(): void
+    public function test_the_wizard_is_look_then_logo_then_download_in_that_order(): void
+    {
+        $page = $this->get('/')->assertOk()->getContent();
+
+        preg_match_all('/<button[^>]*class="eq-step"[^>]*data-step="(\w+)"/', $page, $steps);
+
+        $this->assertSame(['look', 'logo', 'download'], $steps[1]);
+        $this->assertStringContainsString('<section class="eq-editor-panel" data-step="logo"', $page);
+    }
+
+    public function test_the_logo_step_reads_a_local_file_and_can_be_skipped(): void
+    {
+        $page = $this->get('/')->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/<input type="file" data-logo-file accept="[^"]*image\/png/', $page);
+        $this->assertStringContainsString("'Skip'", $page);
+        $this->assertStringContainsString('QrDesignControls.mount', $page);
+        $this->assertStringNotContainsString('FormData', $page);
+    }
+
+    public function test_every_design_option_in_the_spec_is_on_the_page(): void
+    {
+        $page = $this->get('/')->assertOk()->getContent();
+
+        $options = [
+            'dot' => ['square', 'rounded', 'dots', 'fluid'],
+            'corner' => ['square', 'rounded', 'circle'],
+            'eye' => ['square', 'rounded', 'dot'],
+            'frame' => ['none', 'label', 'border', 'badge'],
+            'logoShape' => ['square', 'rounded', 'circle'],
+        ];
+
+        foreach ($options as $setting => $values) {
+            foreach ($values as $value) {
+                $this->assertStringContainsString('data-setting="'.$setting.'" data-value="'.$value.'"', $page, "$setting $value");
+            }
+        }
+
+        foreach (['codeColor', 'eyeColor', 'bgColor'] as $colour) {
+            $this->assertStringContainsString('data-colour-swatch="'.$colour.'"', $page);
+            $this->assertStringContainsString('data-colour-picker="'.$colour.'"', $page);
+            $this->assertStringContainsString('data-colour-hex="'.$colour.'"', $page);
+        }
+
+        $this->assertMatchesRegularExpression('/data-frame-text [^>]*maxlength="18"/', $page);
+        $this->assertStringContainsString('More shapes and colours', $page);
+        $this->assertStringContainsString('data-logo-range="size"', $page);
+        $this->assertStringContainsString('data-logo-range="padding"', $page);
+        $this->assertStringContainsString('data-logo-switch="backing"', $page);
+        $this->assertStringContainsString('data-logo-switch="clearSpace"', $page);
+    }
+
+    public function test_the_logo_ranges_are_ten_to_twenty_five_and_nought_to_five(): void
+    {
+        $page = $this->get('/')->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/data-logo-range="size" min="10" max="25"/', $page);
+        $this->assertMatchesRegularExpression('/data-logo-range="padding" min="0" max="5"/', $page);
+    }
+
+    public function test_every_option_is_a_labelled_button_that_states_whether_it_is_selected(): void
+    {
+        $page = $this->get('/')->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/<button type="button" class="eq-option" data-setting="dot" data-value="fluid" aria-pressed="false">\s*<span[^>]*><\/span>\s*<span class="eq-option-name">Fluid<\/span>/', $page);
+        $this->assertMatchesRegularExpression('/<button[^>]*data-colour-swatch="codeColor"[^>]*aria-label="Code colour #171b19"[^>]*aria-pressed="false"/', $page);
+        $this->assertMatchesRegularExpression('/<input type="text" class="eq-hex"[^>]*aria-label="Code colour as hex"/', $page);
+        $this->assertMatchesRegularExpression('/<label[^>]*for="qrc-logo-size">Size<\/label>/', $page);
+    }
+
+    public function test_the_controls_are_components_that_work_without_the_wizard(): void
+    {
+        $this->blade('<x-qr-design-controls.shapes /><x-qr-design-controls.colours /><x-qr-design-controls.frame /><x-qr-design-controls.logo />')
+            ->assertSee('data-qr-section="shapes"', false)
+            ->assertSee('data-qr-section="colours"', false)
+            ->assertSee('data-qr-section="frame"', false)
+            ->assertSee('data-qr-section="logo"', false)
+            ->assertSee('data-setting="eye" data-value="dot"', false)
+            ->assertDontSee('static-result', false);
+    }
+
+    public function test_warnings_and_the_reason_a_download_is_blocked_are_stated_on_the_page(): void
+    {
+        $page = $this->get('/')->assertOk()->getContent();
+
+        $this->assertStringContainsString('id="static-warnings"', $page);
+        $this->assertStringContainsString('id="static-blocked"', $page);
+        $this->assertMatchesRegularExpression('/<button[^>]*id="static-download-png"[^>]*aria-describedby="static-blocked"/', $page);
+        $this->assertStringContainsString('QrDesignControls.verdict(design)', $page);
+    }
+
+    public function test_the_look_indicator_ships_and_the_page_loads_the_controls_versioned(): void
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('data-step="look"', false)
-            ->assertSee('data-step="download"', false)
-            ->assertDontSee('data-step="logo"', false);
+            ->assertSee('id="static-look-name"', false)
+            ->assertSee(Asset::versioned('js/qr-design-controls.js'), false)
+            ->assertSee(Asset::versioned('css/qr-design-controls.css'), false);
     }
 
     public function test_the_look_step_draws_its_looks_from_the_renderer_with_rounded_as_the_default(): void

@@ -519,7 +519,7 @@ class LandingPageTest extends TestCase
             return $matches[1];
         })($this->get($uri)->assertOk()->getContent());
 
-        $this->assertCount(3, $scripts('/'));
+        $this->assertCount(4, $scripts('/'));
         $this->assertSame($scripts('/'), $scripts('/'.self::HUB));
     }
 

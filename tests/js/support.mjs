@@ -3,11 +3,12 @@ import jsQR from 'jsqr';
 import { readFileSync } from 'node:fs';
 import { runInThisContext } from 'node:vm';
 
-for (const file of ['qrcode-generator.js', 'qr-renderer.js']) {
+for (const file of ['qrcode-generator.js', 'qr-renderer.js', 'qr-design-controls.js']) {
     runInThisContext(readFileSync(new URL(`../../public/js/${file}`, import.meta.url), 'utf8'), { filename: file });
 }
 
 export const renderer = globalThis.QrRenderer;
+export const controls = globalThis.QrDesignControls;
 
 export const SHORT_URL = 'https://easyqr.example/q/aB3dE5gH';
 export const LONG_URL = 'https://www.example.com/restaurants/amsterdam/central/menu?lang=en&table=14&utm_source=qr&utm_medium=print&utm_campaign=autumn-2026&session=0123456789abcdef0123456789abcdef';

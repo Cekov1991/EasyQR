@@ -3,12 +3,16 @@
 {{--
     The static generator, as the Steps editor: the link field in the hero, the
     visitor's own code drawn beneath it as they type, and a short wizard —
-    Look, then Download. Shared by the homepage and the Landing Pages, so the
+    Look, Logo, then Download. Shared by the homepage and the Landing Pages, so the
     code a visitor downloads is the same thing wherever they made it.
 
     The code is drawn in the browser by the one renderer (public/js/qr-renderer.js,
-    ADR-0005). The link never leaves the page: the only thing sent to us is an
-    event, and none of them carries the link. The offer still opens after the
+    ADR-0005). The link never leaves the page, and neither does a logo: it is read
+    from a local file with FileReader and drawn into the code here. The only
+    thing sent to us is an event, and none of them carries the link.
+
+    The Design controls are the <x-qr-design-controls.*> components, bound by
+    public/js/qr-design-controls.js, so the dashboard editor can use the same ones. The offer still opens after the
     first download.
 
     `page` names the page it is embedded on: `home`, or a Landing Page slug.
@@ -19,6 +23,10 @@
 
     One per page: the element ids are fixed, and the script is pushed once.
 --}}
+@pushOnce('styles')
+    <link href="{{ \App\Support\Asset::versioned('css/qr-design-controls.css') }}" rel="stylesheet">
+@endPushOnce
+
 <div class="eq-editor-wrap">
 
     {{-- The hero's link field. Everything below it appears once the link is valid. --}}
@@ -34,14 +42,31 @@
 
         <ol class="eq-steps">
             <li><button type="button" class="eq-step" data-step="look" aria-current="step"><span class="eq-step-number" aria-hidden="true">1</span>Look</button></li>
-            <li><button type="button" class="eq-step" data-step="download" aria-current="false"><span class="eq-step-number" aria-hidden="true">2</span>Download</button></li>
+            <li><button type="button" class="eq-step" data-step="logo" aria-current="false"><span class="eq-step-number" aria-hidden="true">2</span>Logo</button></li>
+            <li><button type="button" class="eq-step" data-step="download" aria-current="false"><span class="eq-step-number" aria-hidden="true">3</span>Download</button></li>
         </ol>
 
         <div id="static-preview" class="eq-editor-preview" role="img" aria-label="Your QR code"></div>
 
+        {{-- Beside the preview at every step, so a faint colour is seen where it was chosen. --}}
+        <ul id="static-warnings" class="eq-editor-notices" role="status" aria-label="Scan check"></ul>
+
         <section class="eq-editor-panel" data-step="look" aria-label="Look">
             <p class="eq-editor-hint">Pick a look. Each one is drawn with your own link.</p>
             <div id="static-looks" class="eq-looks" role="group" aria-label="Look"></div>
+            <p class="eq-editor-look">Look: <strong id="static-look-name">Rounded</strong></p>
+
+            <details class="eq-more">
+                <summary>More shapes and colours</summary>
+                <x-qr-design-controls.shapes />
+                <x-qr-design-controls.colours />
+                <x-qr-design-controls.frame />
+            </details>
+        </section>
+
+        <section class="eq-editor-panel" data-step="logo" aria-label="Logo" hidden>
+            <p class="eq-editor-hint">Optional. Your logo stays on your device. Nothing is uploaded.</p>
+            <x-qr-design-controls.logo />
         </section>
 
         <section class="eq-editor-panel" data-step="download" aria-label="Download" hidden>
@@ -54,11 +79,12 @@
                     <option value="4096">4096 px</option>
                 </select>
             </div>
+            <p id="static-blocked" class="eq-editor-blocked" role="alert" hidden></p>
             <div class="eq-actions">
-                <button type="button" id="static-download-png" class="eq-btn eq-btn-primary eq-btn--sm">Download PNG</button>
-                <button type="button" id="static-download-svg" class="eq-btn eq-btn-outline eq-btn--sm">Download SVG</button>
-                <button type="button" id="static-copy" class="eq-btn eq-btn-outline eq-btn--sm" hidden>Copy as an image</button>
-                <button type="button" id="static-share" class="eq-btn eq-btn-outline eq-btn--sm" hidden>Share</button>
+                <button type="button" id="static-download-png" class="eq-btn eq-btn-primary eq-btn--sm" aria-describedby="static-blocked">Download PNG</button>
+                <button type="button" id="static-download-svg" class="eq-btn eq-btn-outline eq-btn--sm" aria-describedby="static-blocked">Download SVG</button>
+                <button type="button" id="static-copy" class="eq-btn eq-btn-outline eq-btn--sm" aria-describedby="static-blocked" hidden>Copy as an image</button>
+                <button type="button" id="static-share" class="eq-btn eq-btn-outline eq-btn--sm" aria-describedby="static-blocked" hidden>Share</button>
             </div>
             <p id="static-status" class="eq-editor-status" role="status"></p>
             <p class="eq-editor-hint">Scan it with your phone before you print.</p>
@@ -149,6 +175,7 @@
 @pushOnce('scripts')
     <script src="{{ \App\Support\Asset::versioned('js/qrcode-generator.js') }}"></script>
     <script src="{{ \App\Support\Asset::versioned('js/qr-renderer.js') }}"></script>
+    <script src="{{ \App\Support\Asset::versioned('js/qr-design-controls.js') }}"></script>
     <script src="{{ \App\Support\Asset::versioned('js/qr-link.js') }}"></script>
     <script>
         (function () {
@@ -158,6 +185,9 @@
             const result = document.getElementById('static-result');
             const preview = document.getElementById('static-preview');
             const looks = document.getElementById('static-looks');
+            const lookName = document.getElementById('static-look-name');
+            const warnings = document.getElementById('static-warnings');
+            const blockedMessage = document.getElementById('static-blocked');
             const sizeSelect = document.getElementById('static-png-size');
             const downloadPng = document.getElementById('static-download-png');
             const downloadSvg = document.getElementById('static-download-svg');
@@ -381,6 +411,8 @@
             const TOO_LONG = 'That link is too long to fit in a QR code.';
 
             let design = QrRenderer.defaultDesign();
+            let logoSrc = null;
+            let blocked = false;
             let link = null;
             let errorTimer = null;
             let reportedGenerated = false;
@@ -394,6 +426,16 @@
                 status.textContent = text;
             }
 
+            const STEPS = ['look', 'logo', 'download'];
+
+            function currentStep() {
+                return document.querySelector('.eq-step[aria-current="step"]').dataset.step;
+            }
+
+            function paintNextButton() {
+                nextButton.textContent = currentStep() === 'logo' && !design.logo ? 'Skip' : 'Next';
+            }
+
             function showStep(name) {
                 document.querySelectorAll('.eq-editor-panel').forEach(function (panel) {
                     panel.hidden = panel.dataset.step !== name;
@@ -403,14 +445,15 @@
                     step.setAttribute('aria-current', step.dataset.step === name ? 'step' : 'false');
                 });
 
-                backButton.hidden = name === 'look';
-                nextButton.hidden = name === 'download';
-                preview.classList.toggle('is-small', name === 'look');
+                backButton.hidden = name === STEPS[0];
+                nextButton.hidden = name === STEPS[STEPS.length - 1];
+                preview.classList.toggle('is-small', name !== 'download');
+                paintNextButton();
                 showStatus('');
             }
 
-            function currentStep() {
-                return document.querySelector('.eq-step[aria-current="step"]').dataset.step;
+            function moveStep(direction) {
+                showStep(STEPS[STEPS.indexOf(currentStep()) + direction]);
             }
 
             const lookButtons = {};
@@ -431,6 +474,7 @@
 
                 button.addEventListener('click', function () {
                     design = QrRenderer.applyLook(design, key);
+                    controls.update({ design: design });
                     draw();
                 });
 
@@ -445,7 +489,41 @@
                     const button = lookButtons[key];
 
                     button.setAttribute('aria-pressed', key === active ? 'true' : 'false');
-                    button.querySelector('.eq-look-thumb').innerHTML = QrRenderer.render(link, QrRenderer.applyLook(Object.assign({}, design, { frame: 'none' }), key)).svg;
+                    button.querySelector('.eq-look-thumb').innerHTML = QrRenderer.render(link, QrRenderer.applyLook(Object.assign({}, design, { frame: 'none', logo: null }), key)).svg;
+                });
+
+                lookName.textContent = QrDesignControls.lookName(design);
+            }
+
+            /**
+             * The scan check drives the page: warnings and blockers sit beside the
+             * preview, and while the Design is blocked every way of getting the
+             * code out is disabled with the reason stated.
+             */
+            function paintVerdict(verdict) {
+                warnings.replaceChildren();
+
+                verdict.reasons.forEach(function (reason) {
+                    const item = document.createElement('li');
+
+                    item.dataset.tone = 'blocked';
+                    item.textContent = reason;
+                    warnings.append(item);
+                });
+
+                verdict.warnings.forEach(function (warning) {
+                    const item = document.createElement('li');
+
+                    item.dataset.tone = 'warning';
+                    item.textContent = warning;
+                    warnings.append(item);
+                });
+
+                blockedMessage.hidden = !verdict.blocked;
+                blockedMessage.textContent = verdict.blocked ? 'Downloading is off until this is fixed. ' + verdict.reasons.join(' ') : '';
+
+                [downloadPng, downloadSvg, copyButton, shareButton].forEach(function (button) {
+                    button.disabled = verdict.blocked;
                 });
             }
 
@@ -479,9 +557,10 @@
                 }
 
                 let drawn;
+                let verdict;
 
                 try {
-                    drawn = QrRenderer.render(checked.link, design);
+                    drawn = QrRenderer.render(checked.link, design, { logoSrc: logoSrc });
                 } catch (e) {
                     hideCode();
                     say(TOO_LONG, 'error');
@@ -494,6 +573,10 @@
                 preview.innerHTML = drawn.svg;
                 preview.style.aspectRatio = drawn.width + ' / ' + drawn.height;
                 paintLooks();
+                paintNextButton();
+                verdict = QrDesignControls.verdict(design);
+                blocked = verdict.blocked;
+                paintVerdict(verdict);
                 result.hidden = false;
 
                 /*
@@ -512,12 +595,12 @@
             }
 
             function svgBlob() {
-                return new Blob([QrRenderer.render(link, design, { pixelWidth: SVG_PIXELS }).svg], { type: 'image/svg+xml' });
+                return new Blob([QrRenderer.render(link, design, { pixelWidth: SVG_PIXELS, logoSrc: logoSrc }).svg], { type: 'image/svg+xml' });
             }
 
             function pngBlob(width) {
                 return new Promise(function (resolve, reject) {
-                    const drawn = QrRenderer.render(link, design, { pixelWidth: width });
+                    const drawn = QrRenderer.render(link, design, { pixelWidth: width, logoSrc: logoSrc });
                     const height = Math.round(width * drawn.height / drawn.width);
                     const source = URL.createObjectURL(new Blob([drawn.svg], { type: 'image/svg+xml' }));
                     const image = new Image();
@@ -557,6 +640,10 @@
             }
 
             downloadPng.addEventListener('click', async function () {
+                if (blocked) {
+                    return;
+                }
+
                 try {
                     save(await pngBlob(pixelsWide()), 'qr-code.png');
                     showStatus('PNG downloaded.');
@@ -567,6 +654,10 @@
             });
 
             downloadSvg.addEventListener('click', function () {
+                if (blocked) {
+                    return;
+                }
+
                 save(svgBlob(), 'qr-code.svg');
                 showStatus('SVG downloaded.');
                 handleDownload('svg');
@@ -592,6 +683,10 @@
             shareButton.hidden = !canShareFiles();
 
             copyButton.addEventListener('click', async function () {
+                if (blocked) {
+                    return;
+                }
+
                 try {
                     await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob(pixelsWide()) })]);
                     showStatus('Copied as an image.');
@@ -601,6 +696,10 @@
             });
 
             shareButton.addEventListener('click', async function () {
+                if (blocked) {
+                    return;
+                }
+
                 try {
                     const file = new File([await pngBlob(pixelsWide())], 'qr-code.png', { type: 'image/png' });
 
@@ -619,11 +718,11 @@
             });
 
             nextButton.addEventListener('click', function () {
-                showStep('download');
+                moveStep(1);
             });
 
             backButton.addEventListener('click', function () {
-                showStep('look');
+                moveStep(-1);
             });
 
             form.addEventListener('submit', function (event) {
@@ -631,6 +730,21 @@
             });
 
             input.addEventListener('input', draw);
+
+            /*
+             * Every control lives inside the editor and reports here. The logo
+             * picture is held in memory only: it is read from a local file and
+             * drawn into the code, and is never sent anywhere.
+             */
+            const controls = QrDesignControls.mount(result, {
+                design: design,
+                logoSrc: logoSrc,
+                onChange: function (state) {
+                    design = state.design;
+                    logoSrc = state.logoSrc;
+                    draw();
+                },
+            });
 
             showStep('look');
             draw();
