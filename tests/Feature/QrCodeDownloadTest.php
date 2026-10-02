@@ -152,6 +152,52 @@ class QrCodeDownloadTest extends TestCase
             ->assertSee($record->formated_content);
     }
 
+    /**
+     * Every code the old form saved kept only what it encodes, in `content`,
+     * and left `qr_content_data` empty. What was printed is that stored text,
+     * so it is what gets drawn, and nothing is rebuilt from fields that were
+     * never kept.
+     */
+    private function codeWithOnlyItsStoredContent(string $content, string $contentType = 'wifi'): QrCode
+    {
+        $record = $this->ownerWith(['qr_content_type' => $contentType]);
+
+        DB::table('qr_codes')->where('id', $record->id)->update([
+            'qr_content_data' => null,
+            'destination_url' => null,
+            'content' => $content,
+        ]);
+
+        return $record->fresh();
+    }
+
+    public function test_a_code_saved_without_its_content_fields_is_drawn_from_what_it_encodes(): void
+    {
+        $record = $this->codeWithOnlyItsStoredContent('WIFI:T:WPA2;S:Cafe;P:secret;;');
+
+        $this->viewPage($record)->assertOk()->assertSee('WIFI:T:WPA2;S:Cafe;P:secret;;');
+    }
+
+    public function test_the_table_and_widget_draw_a_code_saved_without_its_content_fields(): void
+    {
+        $record = $this->codeWithOnlyItsStoredContent('mailto:team@example.com?subject=Hello', 'email');
+
+        Livewire::actingAs($record->user)->test(ListQrCodes::class)
+            ->assertOk()
+            ->assertSee('mailto:team@example.com?subject=Hello');
+
+        Livewire::actingAs($record->user)->test(TopPerformingQrCodes::class)
+            ->assertOk()
+            ->assertSee('mailto:team@example.com?subject=Hello');
+    }
+
+    public function test_a_website_code_saved_without_its_content_fields_is_drawn_from_what_it_encodes(): void
+    {
+        $record = $this->codeWithOnlyItsStoredContent('https://example.com/menu', 'website');
+
+        $this->viewPage($record)->assertOk()->assertSee('https://example.com/menu');
+    }
+
     public function test_the_codes_table_draws_each_code_from_its_design(): void
     {
         $designed = $this->ownerWith(['options' => ['design' => $this->inkDesign()]], dynamic: true);

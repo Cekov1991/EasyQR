@@ -204,9 +204,18 @@ class QrCode extends Model
     /**
      * What the code's image encodes: the Short URL redirect for a Dynamic QR
      * Code, so every scan is counted, and the formatted content for a Static one.
+     *
+     * A saved code answers with the `content` it stored when it was created,
+     * which is exactly what was printed and which the model refuses to change.
+     * Only an unsaved code, such as the editor's live preview, works it out
+     * from the fields.
      */
     public function encodedContent(): string
     {
+        if ($this->exists && filled($this->content)) {
+            return $this->content;
+        }
+
         if ($this->type === 'dynamic') {
             return route('qr.redirect', $this->short_url);
         }
