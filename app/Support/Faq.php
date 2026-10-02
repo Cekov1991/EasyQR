@@ -325,8 +325,8 @@ class Faq
                 'question' => 'What happens to my codes if I stop paying?',
                 'answer' => <<<HTML
                     <p>
-                        Your <strong>static codes are untouched</strong>. They never depended on us and
-                        they keep working permanently.
+                        Your <strong>static codes are untouched</strong>. They never depended on us, and
+                        they keep working as long as the page they point to is there.
                     </p>
                     <p>
                         Your <strong>dynamic codes stop redirecting</strong>. Anyone who scans one sees a
