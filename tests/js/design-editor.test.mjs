@@ -1,10 +1,18 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { Resvg } from '@resvg/resvg-js';
 import { after, before, describe, it } from 'node:test';
 import { startBrowser, unavailable } from './browser.mjs';
 import { SAMPLE_PIXELS_PER_MODULE, decode } from './support.mjs';
 
 const skip = unavailable() ?? false;
 const URL_TO_ENCODE = 'https://example.com/spring-menu';
+
+/** A wide picture on disk, so squaring it is part of what the upload does. */
+const PICTURE = join(mkdtempSync(join(tmpdir(), 'eq-logo-')), 'logo.png');
+writeFileSync(PICTURE, new Resvg('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="100"><rect width="300" height="100" fill="#d92d20"/></svg>').render().asPng());
 
 const SEED = `
     $user = App\\Models\\User::factory()->create(['email' => 'owner@example.com']);
@@ -162,6 +170,78 @@ describe('the Design editor in a real browser', { skip }, () => {
 
             assert.equal(await tab.evaluate('JSON.parse(document.querySelector("[data-qr-design]").dataset.qrDesign).frame'), 'badge');
             assert.equal(await tab.evaluate('document.querySelector("[data-qr-content]").dataset.qrContent'), `${browser.origin}/q/aB3dE5gH`);
+        });
+    });
+
+    describe('putting a logo on a code', () => {
+        const logoOf = () => tab.evaluate(`JSON.parse(JSON.stringify(Livewire.all()[0].$wire.$get('data.options.design'))).logo ?? null`);
+        const logoPath = async () => (await logoOf())?.path;
+        const message = () => tab.evaluate('document.querySelector("[data-logo-message]").textContent');
+
+        before(async () => {
+            await openCreate();
+            await setField('data.qr_content_data.url', URL_TO_ENCODE);
+            await tab.until(previewSvg, 'the preview to draw');
+        });
+
+        it('uploads the picked picture, draws it in the preview and keeps the code scannable', async () => {
+            await tab.setFiles('[data-logo-file]', [PICTURE]);
+            await tab.until(logoPath, 'the upload to be stored');
+
+            assert.match(await logoPath(), /^qr-logos\/\d+\/[A-Za-z0-9]+\.png$/);
+            assert.equal(await message(), '');
+            assert.match(await previewSvg(), /<image[^>]+href="data:image/);
+            assert.equal(await readPreview(), URL_TO_ENCODE);
+            assert.deepEqual(ownExceptions(), []);
+        });
+
+        it('keeps the logo settings in the Design the form saves', async () => {
+            await tab.click('[data-setting="logoShape"][data-value="circle"]');
+
+            assert.equal((await logoOf()).shape, 'circle');
+            assert.equal((await logoOf()).size, 20);
+        });
+
+        it('saves the code, and every page then draws the logo from the logo route', async () => {
+            await setField('data.name', 'Spring menu');
+            await submit();
+            await tab.until(async () => /\/admin\/qr-codes\/\d+$/.test(await tab.evaluate('location.pathname')), 'the saved code');
+            await tab.until(() => tab.evaluate('!!document.querySelector("[data-qr-logo]")'), 'the View page drawing');
+
+            const address = await tab.evaluate('document.querySelector("[data-qr-logo]").dataset.qrLogo');
+            const answer = await tab.evaluate(`fetch(${JSON.stringify(address)}).then((r) => ({ status: r.status, type: r.headers.get('content-type') }))`);
+
+            assert.match(address, /\/qr-codes\/\d+\/logo/);
+            assert.deepEqual(answer, { status: 200, type: 'image/png' });
+        });
+
+        it('opens an edit showing the saved logo, and removing it takes it off the code', async () => {
+            const id = (await tab.evaluate('location.pathname')).split('/').pop();
+
+            await tab.open(`${browser.origin}/admin/qr-codes/${id}/edit`);
+            await tab.until(() => tab.evaluate('!!document.querySelector(".eq-studio [data-look]")'), 'the editor');
+            await tab.until(async () => /<image[^>]+href="[^"]*\/logo/.test((await previewSvg()) ?? ''), 'the saved logo in the preview');
+
+            assert.equal(await tab.evaluate('document.querySelector("[data-logo-remove]").hidden'), false);
+
+            await tab.click('[data-logo-remove]');
+            assert.equal(await logoOf(), null);
+            await submit();
+            await tab.until(() => tab.evaluate('document.body.innerText.includes("Saved")'), 'the save to be confirmed');
+            await tab.open(`${browser.origin}/admin/qr-codes/${id}`);
+            await tab.until(() => tab.evaluate('!!document.querySelector("[data-qr-design]")'), 'the View page drawing');
+
+            assert.equal(await tab.evaluate('document.querySelector("[data-qr-logo]")'), null);
+        });
+
+        it('says so, and leaves no logo on the code, when the picture is not one', async () => {
+            await openCreate();
+            writeFileSync(PICTURE.replace('logo.png', 'notes.png'), 'plain text, not a picture');
+            await tab.setFiles('[data-logo-file]', [PICTURE.replace('logo.png', 'notes.png')]);
+            await tab.until(async () => /PNG, JPG or WebP/.test(await message()), 'a reason');
+
+            assert.equal(await logoOf(), null);
+            assert.equal(await tab.evaluate('document.querySelector("[data-logo-settings]").hidden'), true);
         });
     });
 

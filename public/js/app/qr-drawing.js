@@ -41,9 +41,13 @@
         }
     }
 
-    /** Draws into an element carrying `data-qr-content` and `data-qr-design`. */
+    /**
+     * Draws into an element carrying `data-qr-content` and `data-qr-design`, and
+     * `data-qr-logo` when the code has a logo: the address of the logo route, so
+     * the drawing never reaches another origin.
+     */
     function paint(element) {
-        element.innerHTML = draw(element.dataset.qrContent, element.dataset.qrDesign);
+        element.innerHTML = draw(element.dataset.qrContent, element.dataset.qrDesign, { logoSrc: element.dataset.qrLogo || null });
     }
 
     root.QrDrawing = Object.freeze({ designOf, draw, paint });

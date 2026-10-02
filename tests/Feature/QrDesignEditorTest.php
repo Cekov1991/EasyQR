@@ -46,10 +46,10 @@ class QrDesignEditorTest extends TestCase
     /**
      * @return array<string, mixed>
      */
-    private function logo(array $changes = []): array
+    private function logo(User $user, array $changes = []): array
     {
         return [
-            'path' => 'qr-logos/logo.png',
+            'path' => "qr-logos/{$user->id}/logo.png",
             'shape' => 'rounded',
             'size' => 20,
             'padding' => 2,
@@ -180,7 +180,7 @@ class QrDesignEditorTest extends TestCase
         $user = User::factory()->create();
 
         if (isset($changes['logo'])) {
-            $changes['logo'] = $this->logo($changes['logo']);
+            $changes['logo'] = $this->logo($user, $changes['logo']);
         }
 
         $design = isset($changes['__replace']) ? $changes['__replace'] : $this->design($changes);
@@ -230,7 +230,7 @@ class QrDesignEditorTest extends TestCase
         $user = User::factory()->create();
 
         if (isset($changes['logo'])) {
-            $changes['logo'] = $this->logo($changes['logo']);
+            $changes['logo'] = $this->logo($user, $changes['logo']);
         }
 
         $this->create($this->createForm($user), ['options' => ['design' => $this->design($changes)]])

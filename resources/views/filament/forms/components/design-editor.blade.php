@@ -1,7 +1,8 @@
 {{--
     The Studio: the live preview beside every Design option as a card. The code is
     drawn by public/js/qr-renderer.js, bound to the shared controls by
-    public/js/qr-design-editor.js, and the form state is the Design. The preview
+    public/js/qr-design-editor.js, and the form state is the Design. A logo is
+    uploaded through the page and drawn from our own logo route. The preview
     surround is always light so a code is judged against its own background; the
     controls follow the panel (public/css/qr-design-editor.css).
 --}}
@@ -13,6 +14,7 @@
         x-init="window.QrDesignEditor ? QrDesignEditor.mount($el, $wire) : window.addEventListener('load', () => QrDesignEditor.mount($el, $wire), { once: true })"
         data-state-path="{{ $getStatePath() }}"
         data-encoded-content="{{ $getEncodedContent() }}"
+        @if ($getLogoUrl()) data-logo-url="{{ $getLogoUrl() }}" @endif
     >
         <div class="eq-studio-aside">
             <div class="eq-studio-preview">
@@ -43,6 +45,11 @@
             <section class="eq-studio-card" aria-labelledby="studio-frame-title">
                 <h3 class="eq-studio-card-title" id="studio-frame-title">Frame</h3>
                 <x-qr-design-controls.frame />
+            </section>
+
+            <section class="eq-studio-card" aria-labelledby="studio-logo-title">
+                <h3 class="eq-studio-card-title" id="studio-logo-title">Logo</h3>
+                <x-qr-design-controls.logo />
             </section>
         </div>
     </div>

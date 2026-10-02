@@ -23,6 +23,8 @@
     const SAMPLE_CONTENT = 'EasyQR';
 
     const TOO_LONG = 'That is more than fits in a QR code. Shorten it.';
+    const UPLOADING = 'Uploading your logo...';
+    const UPLOAD_FAILED = 'That logo could not be uploaded. Try another.';
 
     const clone = (value) => JSON.parse(JSON.stringify(value));
 
@@ -51,6 +53,8 @@
         const lookName = one('[data-studio-look-name]');
 
         let design = startingDesign(wire.$get(path));
+        let logoSrc = design.logo ? element.dataset.logoUrl || null : null;
+        let uploads = 0;
         let content = element.dataset.encodedContent || '';
         let timer = null;
         let asked = 0;
@@ -119,7 +123,7 @@
 
             if (content) {
                 try {
-                    drawn = renderer.render(content, design);
+                    drawn = renderer.render(content, design, { logoSrc: design.logo ? logoSrc : null });
                 } catch (e) {
                     problem = [{ tone: 'blocked', text: TOO_LONG }];
                 }
@@ -157,13 +161,67 @@
 
         CONTENT_FIELDS.forEach((field) => wire.$watch(`data.${field}`, contentFieldChanged));
 
+        function say(text) {
+            element.querySelectorAll('[data-logo-message]').forEach((message) => {
+                message.textContent = text;
+            });
+        }
+
+        function dropLogo(reason) {
+            design = { ...design, logo: null };
+            logoSrc = null;
+            panel.update({ design, logoSrc });
+            save();
+            draw();
+            say(reason);
+        }
+
+        /**
+         * Puts the picked file on the bucket through the page, and writes the path it
+         * was stored under into the Design. The picture in the preview is the local
+         * one meanwhile, so nothing waits on the upload to be drawn.
+         */
+        function upload(file) {
+            const ticket = ++uploads;
+
+            say(UPLOADING);
+            wire.upload('designLogoUpload', file, async () => {
+                const answer = await wire.storeDesignLogo();
+
+                if (ticket !== uploads) {
+                    return;
+                }
+
+                if (answer && answer.path) {
+                    design = { ...design, logo: { ...design.logo, path: answer.path } };
+                    panel.update({ design });
+                    save();
+                    say('');
+                } else {
+                    dropLogo((answer && answer.error) || UPLOAD_FAILED);
+                }
+            }, () => {
+                if (ticket === uploads) {
+                    dropLogo(UPLOAD_FAILED);
+                }
+            });
+        }
+
         const panel = controls.mount(element, {
             design,
+            logoSrc,
             onChange: (state) => {
                 design = state.design;
+                logoSrc = state.logoSrc;
+
+                if (!design.logo) {
+                    uploads++;
+                }
+
                 save();
                 draw();
             },
+            onLogoFile: upload,
         });
 
         draw();

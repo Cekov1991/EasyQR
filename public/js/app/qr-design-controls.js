@@ -235,7 +235,8 @@
     /**
      * Binds the controls found inside `container`. State is the Design plus the logo
      * picture; the picture is kept beside the Design because a Design never carries
-     * pixels. Every change calls `onChange({ design, logoSrc })`.
+     * pixels. Every change calls `onChange({ design, logoSrc })`. A newly chosen logo
+     * file also calls `onLogoFile(file, logoSrc)`, for editors that keep the file.
      *
      * @returns {{update: Function, state: Function}}
      */
@@ -394,6 +395,10 @@
 
                     say('');
                     emit(addLogo(state.design), logoSrc);
+
+                    if (options.onLogoFile) {
+                        options.onLogoFile(field.files[0], logoSrc);
+                    }
                 } catch (e) {
                     say(e.message);
                 }

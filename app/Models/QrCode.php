@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\DesignLogo;
 use App\Support\QrDesignOptions;
 use Database\Factories\QrCodeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -47,13 +48,6 @@ class QrCode extends Model
     const LOGO_MAX_COVERAGE = 0.25;
 
     const LOGO_DEFAULT_COVERAGE = 0.2;
-
-    /**
-     * The overlay is never larger than a quarter of the largest permitted
-     * symbol, so nothing is gained by squaring a source bigger than this — and
-     * squaring a 4000x100 banner unbounded would allocate a 4000x4000 canvas.
-     */
-    const LOGO_MAX_SOURCE_EDGE = 512;
 
     /**
      * Deliberately tiny payload: fewer modules means larger ones, which is what
@@ -145,6 +139,15 @@ class QrCode extends Model
                 throw new \Exception('Static QR codes cannot be updated after creation to preserve printed codes.');
             }
 
+            // A logo the Design no longer references has nothing left to be for.
+            if ($qrCode->isDirty('options')) {
+                $replaced = static::logoPathOf($qrCode->getOriginal('options') ?? []);
+
+                if ($replaced !== null && $replaced !== static::logoPathOf($qrCode->options ?? [])) {
+                    DesignLogo::delete($replaced);
+                }
+            }
+
             // Dynamic QR codes: the destination may change, but never the Short URL
             // or the content the printed image encodes. Restyling is a Design change.
             if ($qrCode->type === 'dynamic' && $qrCode->isDirty(['content', 'short_url', 'qr_code_path', 'qr_code_image'])) {
@@ -164,18 +167,39 @@ class QrCode extends Model
      */
     protected function deleteStoredFiles(): void
     {
-        $paths = array_filter([
-            $this->qr_code_image,
-            $this->options['logo_path'] ?? null,
-        ], fn ($path): bool => is_string($path) && $path !== '');
-
-        foreach ($paths as $path) {
-            try {
-                Storage::delete($path);
-            } catch (\Throwable) {
-                // A file that has already gone must not block the delete.
-            }
+        foreach ([$this->qr_code_image, $this->designLogoPath()] as $path) {
+            DesignLogo::delete($path);
         }
+    }
+
+    /**
+     * Where the Design's logo file is on the bucket, or null when it has none.
+     */
+    public function designLogoPath(): ?string
+    {
+        return static::logoPathOf($this->options ?? []);
+    }
+
+    /**
+     * The URL every page draws the logo from, or null when the code has none.
+     * It carries a token of the file's path, so a replaced logo is a new URL and
+     * the long cache on the logo route can never serve a stale one.
+     */
+    public function logoUrl(): ?string
+    {
+        $path = $this->designLogoPath();
+
+        return $path === null ? null : route('qr.logo', ['qrCode' => $this, 'v' => substr(md5($path), 0, 12)]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     */
+    protected static function logoPathOf(array $options): ?string
+    {
+        $path = $options['design']['logo']['path'] ?? null;
+
+        return is_string($path) && $path !== '' ? $path : null;
     }
 
     /**
@@ -479,60 +503,9 @@ class QrCode extends Model
         return static::squareLogo($bytes);
     }
 
-    /**
-     * Pads a logo onto a transparent square canvas.
-     *
-     * ImageMerge takes the overlay width from the coverage percentage and then
-     * derives the height from the logo's aspect ratio, so a 100x400 logo asked
-     * for at 25% becomes a full-height stripe down the middle of the symbol.
-     * Squaring the source first makes that derivation a no-op, which is the
-     * only way to bound the overlay in both directions.
-     */
     protected static function squareLogo(string $bytes): ?string
     {
-        $logo = @imagecreatefromstring($bytes);
-
-        if ($logo === false) {
-            return null;
-        }
-
-        $width = imagesx($logo);
-        $height = imagesy($logo);
-        $longestEdge = max($width, $height);
-
-        $scale = min(1, self::LOGO_MAX_SOURCE_EDGE / $longestEdge);
-        $scaledWidth = max(1, (int) round($width * $scale));
-        $scaledHeight = max(1, (int) round($height * $scale));
-        $side = max($scaledWidth, $scaledHeight);
-
-        // Alpha blending stays off so the source's own transparency is copied
-        // rather than composited against the padding.
-        $canvas = imagecreatetruecolor($side, $side);
-        imagealphablending($canvas, false);
-        imagesavealpha($canvas, true);
-        imagefill($canvas, 0, 0, imagecolorallocatealpha($canvas, 0, 0, 0, 127));
-
-        imagecopyresampled(
-            $canvas,
-            $logo,
-            intdiv($side - $scaledWidth, 2),
-            intdiv($side - $scaledHeight, 2),
-            0,
-            0,
-            $scaledWidth,
-            $scaledHeight,
-            $width,
-            $height,
-        );
-
-        ob_start();
-        imagepng($canvas);
-        $square = (string) ob_get_clean();
-
-        imagedestroy($logo);
-        imagedestroy($canvas);
-
-        return $square;
+        return DesignLogo::square($bytes);
     }
 
     /**

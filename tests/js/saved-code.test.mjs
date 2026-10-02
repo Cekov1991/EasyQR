@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import { Resvg } from '@resvg/resvg-js';
-import { CONTENTS, decode, design, download, drawing, options, renderer, SHORT_URL } from './support.mjs';
+import { CONTENTS, decode, design, download, drawing, LOGO, logo, options, renderer, SHORT_URL } from './support.mjs';
 
 const INK = design({ ...renderer.LOOKS.ink, label: undefined, frame: 'badge' });
 const ROUNDED_SVG = renderer.render(SHORT_URL, renderer.defaultDesign()).svg;
@@ -140,5 +140,89 @@ describe('every format of a code', () => {
         const [svg] = await download.bundleEntries(SHORT_URL, undefined, 'poster', [], rasterise);
 
         assert.equal(decode(new TextDecoder().decode(svg.data), 600), SHORT_URL);
+    });
+});
+
+/** How many pixels of a rasterised drawing are the logo's red. */
+function redPixels(svg, width) {
+    const { pixels } = new Resvg(svg, { fitTo: { mode: 'width', value: width }, background: 'white' }).render();
+    let red = 0;
+
+    for (let i = 0; i < pixels.length; i += 4) {
+        if (pixels[i] > 200 && pixels[i + 1] < 70 && pixels[i + 2] < 70) {
+            red++;
+        }
+    }
+
+    return red;
+}
+
+const WITH_LOGO = design({ logo: logo({ shape: 'square', backing: true, clearSpace: true }) });
+const LOGO_URL = 'https://app.example/qr-codes/7/logo?v=abc';
+
+describe('a saved code with a logo', () => {
+    it('draws the logo from the address a page gives it, and still scans', () => {
+        const svg = drawing.draw(SHORT_URL, WITH_LOGO, { logoSrc: LOGO });
+
+        assert.ok(redPixels(svg, 600) > 100, 'the logo is drawn');
+        assert.equal(decode(svg, 600), SHORT_URL);
+    });
+
+    it('draws the logo from the data-qr-logo address of the element it paints', () => {
+        const element = { dataset: { qrContent: SHORT_URL, qrDesign: JSON.stringify(WITH_LOGO), qrLogo: LOGO }, innerHTML: '' };
+
+        drawing.paint(element);
+
+        assert.ok(redPixels(element.innerHTML, 600) > 100);
+    });
+
+    it('draws no logo image when the page gives none', () => {
+        const element = { dataset: { qrContent: SHORT_URL, qrDesign: JSON.stringify(WITH_LOGO) }, innerHTML: '' };
+
+        drawing.paint(element);
+
+        assert.equal(redPixels(element.innerHTML, 600), 0);
+        assert.ok(element.innerHTML.length > 0);
+    });
+});
+
+describe('downloads of a code with a logo', () => {
+    it('turns the logo route address into a picture that travels inside a file', async () => {
+        const bytes = Buffer.from('logo-bytes');
+        const asked = [];
+        const fetcher = async (url, init) => {
+            asked.push([url, init?.credentials]);
+
+            return { ok: true, blob: async () => new Blob([bytes], { type: 'image/png' }) };
+        };
+
+        const inlined = await download.inlineLogo(LOGO_URL, fetcher);
+
+        assert.equal(inlined, `data:image/png;base64,${bytes.toString('base64')}`);
+        assert.deepEqual(asked, [[LOGO_URL, 'same-origin']]);
+    });
+
+    it('has no picture to inline when there is no logo, or when it cannot be fetched', async () => {
+        assert.equal(await download.inlineLogo(null, async () => assert.fail('nothing to fetch')), null);
+        assert.equal(await download.inlineLogo('', async () => assert.fail('nothing to fetch')), null);
+        await assert.rejects(download.inlineLogo(LOGO_URL, async () => ({ ok: false })));
+        await assert.rejects(download.inlineLogo(LOGO_URL, async () => { throw new Error('offline'); }));
+    });
+
+    it('puts the logo inside the SVG and in the picture every PNG is drawn from', async () => {
+        const drawnFrom = [];
+        const spy = async (svg, width) => {
+            drawnFrom.push(svg);
+
+            return rasterise(svg, width);
+        };
+
+        const [svg] = await download.bundleEntries(SHORT_URL, WITH_LOGO, 'poster', [512, 1024], spy, { logoSrc: LOGO });
+        const text = new TextDecoder().decode(svg.data);
+
+        assert.ok(redPixels(text, 600) > 100, 'the SVG carries the logo');
+        assert.equal(decode(text, 600), SHORT_URL);
+        assert.equal(drawnFrom.length, 2);
+        drawnFrom.forEach((source) => assert.ok(redPixels(source, 600) > 100, 'a PNG is drawn with the logo'));
     });
 });

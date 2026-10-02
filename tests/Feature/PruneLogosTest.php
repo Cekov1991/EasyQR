@@ -36,6 +36,25 @@ class PruneLogosTest extends TestCase
         $this->assertSame([], Storage::files('qr-logos'));
     }
 
+    public function test_a_logo_in_an_owners_own_directory_is_pruned_when_abandoned_and_kept_when_used(): void
+    {
+        $user = User::factory()->create();
+        $used = "qr-logos/{$user->id}/used.png";
+        $abandoned = "qr-logos/{$user->id}/abandoned.png";
+        Storage::put($used, 'png-bytes');
+        Storage::put($abandoned, 'png-bytes');
+        QrCode::factory()->for($user)->create([
+            'options' => ['design' => ['version' => 1, 'logo' => ['path' => $used]]],
+        ]);
+
+        $this->travel(100)->hours();
+
+        $this->artisan('logos:prune')->assertSuccessful();
+
+        Storage::assertExists($used);
+        Storage::assertMissing($abandoned);
+    }
+
     public function test_an_upload_inside_the_grace_period_is_left_alone(): void
     {
         $this->travel(47)->hours();
@@ -48,7 +67,7 @@ class PruneLogosTest extends TestCase
     public function test_a_logo_a_record_still_refers_to_is_never_pruned(): void
     {
         QrCode::factory()->for(User::factory())->create([
-            'options' => ['logo_path' => self::LOGO],
+            'options' => ['design' => ['version' => 1, 'logo' => ['path' => self::LOGO]]],
         ]);
 
         $this->travel(100)->hours();

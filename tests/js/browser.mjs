@@ -1,5 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -82,6 +82,7 @@ async function until(check, what, timeout = 15000) {
 /** Serves the app on a fresh SQLite database; resolves to its origin and a stop function. */
 async function serveApp(directory, seed) {
     const database = join(directory, 'app.sqlite');
+    const storage = join(directory, 'storage');
     const port = await freePort();
     const env = {
         ...process.env,
@@ -95,7 +96,12 @@ async function serveApp(directory, seed) {
         LOG_CHANNEL: 'stderr',
         LOG_LEVEL: 'critical',
         PULSE_ENABLED: 'false',
+        LARAVEL_STORAGE_PATH: storage,
     };
+
+    for (const folder of ['app/public', 'app/private', 'framework/cache/data', 'framework/sessions', 'framework/views', 'framework/testing', 'logs']) {
+        mkdirSync(join(storage, folder), { recursive: true });
+    }
 
     writeFileSync(database, '');
 

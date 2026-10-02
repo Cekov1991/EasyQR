@@ -265,20 +265,6 @@ class QrCodeResource extends Resource
                     ])
                     ->columnSpanFull(),
 
-                Section::make('Centre logo')
-                    ->description('Optional. Drawing a logo on the code arrives in the next update; an uploaded logo is kept with the code until then.')
-                    ->schema([
-                        Forms\Components\FileUpload::make('options.logo_path')
-                            ->label('Centre logo')
-                            ->image()
-                            ->disk(config('filesystems.default'))
-                            ->directory('qr-logos')
-                            ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp'])
-                            ->maxSize(2048)
-                            ->columnSpanFull(),
-                    ])
-                    ->visible(fn (?QrCode $record): bool => $record === null),
-
                 Section::make('Current QR Code Settings')
                     ->schema([
                         Forms\Components\Placeholder::make('qr_type_display')

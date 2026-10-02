@@ -150,6 +150,41 @@
         return entries;
     }
 
+    /* -------------------------------------------------------------- logo -- */
+
+    /**
+     * The logo as a data URL. A file saved to disk, and a picture drawn from an SVG
+     * blob, cannot reach back to the site for an image, so the logo travels inside
+     * them. The address is the logo route, on this origin, which is what keeps the
+     * canvas untainted. Nothing to inline is null; a logo that cannot be fetched
+     * rejects, so a download never quietly leaves the logo out.
+     *
+     * @param {string|null|undefined} url
+     * @param {typeof fetch} [fetcher]
+     * @returns {Promise<string|null>}
+     */
+    async function inlineLogo(url, fetcher = root.fetch) {
+        if (!url) {
+            return null;
+        }
+
+        const response = await fetcher(url, { credentials: 'same-origin' });
+
+        if (!response.ok) {
+            throw new Error('logo unavailable');
+        }
+
+        const blob = await response.blob();
+        const bytes = new Uint8Array(await blob.arrayBuffer());
+        let binary = '';
+
+        for (let i = 0; i < bytes.length; i += 0x8000) {
+            binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+        }
+
+        return `data:${blob.type || 'image/png'};base64,${root.btoa(binary)}`;
+    }
+
     /* ----------------------------------------------------------- browser -- */
 
     function rasteriseBlob(svg, width, height) {
@@ -205,19 +240,20 @@
         const say = (text) => { status.textContent = text; };
         const content = () => source.dataset.qrContent;
         const design = () => source.dataset.qrDesign;
+        const logoSrc = () => inlineLogo(source.dataset.qrLogo);
 
         const actions = {
             async png() {
                 const width = parseInt(sizeSelect.value, 10);
-                const drawn = root.QrRenderer.render(content(), root.QrDrawing.designOf(design()), { pixelWidth: width });
+                const drawn = root.QrRenderer.render(content(), root.QrDrawing.designOf(design()), { pixelWidth: width, logoSrc: await logoSrc() });
 
                 save(await rasteriseBlob(drawn.svg, width, Math.round(width * drawn.height / drawn.width)), `${fileName}-${width}px.png`);
             },
             async svg() {
-                save(new Blob([svgText(content(), design())], { type: 'image/svg+xml' }), `${fileName}.svg`);
+                save(new Blob([svgText(content(), design(), { logoSrc: await logoSrc() })], { type: 'image/svg+xml' }), `${fileName}.svg`);
             },
             async zip() {
-                const entries = await bundleEntries(content(), design(), fileName, sizes, rasterise);
+                const entries = await bundleEntries(content(), design(), fileName, sizes, rasterise, { logoSrc: await logoSrc() });
 
                 save(new Blob([zip(entries)], { type: 'application/zip' }), `${fileName}-qr-codes.zip`);
             },
@@ -237,5 +273,5 @@
         });
     }
 
-    root.QrDownload = Object.freeze({ zip, crc32, svgText, bundleEntries, rasterise, mount });
+    root.QrDownload = Object.freeze({ zip, crc32, svgText, bundleEntries, inlineLogo, rasterise, mount });
 })(globalThis);

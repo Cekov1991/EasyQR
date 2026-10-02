@@ -4,6 +4,7 @@ use App\Http\Controllers\AbuseReportController;
 use App\Http\Controllers\AgentaOsWebhookController;
 use App\Http\Controllers\CrawlerController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\QrCodeLogoController;
 use App\Http\Controllers\QrCodeRedirectController;
 use App\Http\Controllers\SiteEventController;
 use App\Http\Controllers\SubscriptionController;
@@ -65,6 +66,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // A saved code's logo, served from our own origin to its Owner only
+    Route::get('/qr-codes/{qrCode}/logo', [QrCodeLogoController::class, 'show'])->name('qr.logo');
 
     // Billing
     Route::post('/billing/subscribe', [SubscriptionController::class, 'checkout'])

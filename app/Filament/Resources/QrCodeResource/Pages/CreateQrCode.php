@@ -4,6 +4,7 @@ namespace App\Filament\Resources\QrCodeResource\Pages;
 
 use App\Filament\Resources\QrCodeResource;
 use App\Filament\Resources\QrCodeResource\Concerns\PreviewsEncodedContent;
+use App\Filament\Resources\QrCodeResource\Concerns\StoresDesignLogo;
 use App\Models\QrCode;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
@@ -12,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 class CreateQrCode extends CreateRecord
 {
     use PreviewsEncodedContent;
+    use StoresDesignLogo;
 
     protected static string $resource = QrCodeResource::class;
 

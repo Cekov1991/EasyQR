@@ -3,13 +3,14 @@
 namespace App\Console\Commands;
 
 use App\Models\QrCode;
+use App\Support\DesignLogo;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 
 /**
  * Deletes uploaded centre logos that no QR code refers to.
  *
- * The dashboard uploads the logo before the record exists. An Owner who picks
+ * The Design editor uploads the logo before the record exists. An Owner who picks
  * a logo and then abandons the form, or replaces it, can leave the file behind
  * with nothing pointing at it, and nothing else collects it: the model's
  * `deleting` hook only reaches logos a saved record owns.
@@ -23,11 +24,6 @@ class PruneLogos extends Command
     protected $signature = 'logos:prune {--dry-run : Report what would be deleted without deleting it}';
 
     protected $description = 'Delete uploaded centre logos that no QR code refers to';
-
-    /**
-     * The directory the FileUpload field writes into.
-     */
-    private const DIRECTORY = 'qr-logos';
 
     public function handle(): int
     {
@@ -83,7 +79,7 @@ class PruneLogos extends Command
         $cutoff = now()->subHours($hours)->getTimestamp();
 
         return array_values(array_filter(
-            Storage::files(self::DIRECTORY),
+            Storage::allFiles(DesignLogo::DIRECTORY),
             fn (string $path): bool => ! isset($referenced[$path])
                 && Storage::lastModified($path) < $cutoff,
         ));
@@ -104,9 +100,9 @@ class PruneLogos extends Command
             ->whereNotNull('options')
             ->cursor()
             ->each(function (QrCode $qrCode) use (&$referenced): void {
-                $path = $qrCode->options['logo_path'] ?? null;
+                $path = $qrCode->designLogoPath();
 
-                if (is_string($path) && $path !== '') {
+                if ($path !== null) {
                     $referenced[$path] = true;
                 }
             });

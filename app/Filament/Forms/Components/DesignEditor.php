@@ -2,9 +2,12 @@
 
 namespace App\Filament\Forms\Components;
 
+use App\Models\QrCode;
+use App\Rules\OwnsDesignLogo;
 use App\Rules\ValidQrDesign;
 use App\Support\QrDesignOptions;
 use Filament\Forms\Components\Field;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * The Design editor (prototype variant A, "Studio"). Its state is the Design, so
@@ -31,6 +34,18 @@ class DesignEditor extends Field
             : QrDesignOptions::defaultDesign());
 
         $this->rule(new ValidQrDesign);
+
+        $this->rule(fn (?QrCode $record): OwnsDesignLogo => new OwnsDesignLogo(Auth::id(), $record?->designLogoPath()));
+    }
+
+    /**
+     * Where the browser draws the saved logo from, or null before there is one.
+     */
+    public function getLogoUrl(): ?string
+    {
+        $record = $this->getRecord();
+
+        return $record instanceof QrCode ? $record->logoUrl() : null;
     }
 
     /**
