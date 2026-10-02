@@ -137,22 +137,37 @@ class LandingPageTest extends TestCase
     }
 
     /**
-     * The pages drafted first, so a person can set the voice on them before
-     * the other ten are written.
+     * The pages whose copy is written: the voice pilot first, then the pages
+     * drafted in the voice it set. Each still waits for a person to publish it.
      *
      * @return array<string, array{0: string}>
      */
-    public static function voicePilotProvider(): array
+    public static function draftedPageProvider(): array
     {
         return [
             'hub' => [self::HUB],
-            'problem' => ['qr-code-stopped-working'],
-            'use case' => ['restaurant-menu-qr-code'],
+            'stopped working' => ['qr-code-stopped-working'],
+            'expired' => ['qr-code-expired'],
+            'no expiration' => ['free-qr-code-no-expiration'],
+            'no subscription' => ['qr-code-without-subscription'],
+            'fix printed' => ['fix-printed-qr-code'],
+            'restaurant menu' => ['restaurant-menu-qr-code'],
         ];
     }
 
-    #[DataProvider('voicePilotProvider')]
-    public function test_a_pilot_page_fits_in_a_search_result(string $slug): void
+    /**
+     * Every drafted page except the one written for the searcher who typed
+     * "expired".
+     *
+     * @return array<string, array{0: string}>
+     */
+    public static function draftedPageNotAboutExpiryProvider(): array
+    {
+        return array_filter(self::draftedPageProvider(), fn (array $case): bool => $case[0] !== 'qr-code-expired');
+    }
+
+    #[DataProvider('draftedPageProvider')]
+    public function test_a_drafted_page_fits_in_a_search_result(string $slug): void
     {
         $this->publishLandingPage($slug);
 
@@ -166,16 +181,25 @@ class LandingPageTest extends TestCase
         $this->assertStringContainsString('<link rel="canonical" href="'.url('/'.$slug).'">', $html);
     }
 
-    #[DataProvider('voicePilotProvider')]
-    public function test_a_pilot_page_says_what_it_is_about_in_its_h1(string $slug): void
+    /**
+     * A searched phrase is rarely a sentence ("qr code generator no
+     * subscription"), so the H1 carries every word of it in an order a
+     * person would write.
+     */
+    #[DataProvider('draftedPageProvider')]
+    public function test_a_drafted_page_says_what_it_is_about_in_its_h1(string $slug): void
     {
         $page = LandingPages::find($slug);
 
-        $this->assertStringContainsStringIgnoringCase($page->keyword, $page->h1);
+        $words = preg_split('~\W+~', strtolower($page->h1), -1, PREG_SPLIT_NO_EMPTY);
+
+        foreach (explode(' ', $page->keyword) as $word) {
+            $this->assertContains($word, $words, "{$slug}'s H1 leaves out \"{$word}\" from its keyword.");
+        }
     }
 
-    #[DataProvider('voicePilotProvider')]
-    public function test_a_pilot_page_has_related_pages(string $slug): void
+    #[DataProvider('draftedPageProvider')]
+    public function test_a_drafted_page_has_related_pages(string $slug): void
     {
         $page = LandingPages::find($slug);
 
@@ -189,8 +213,8 @@ class LandingPageTest extends TestCase
      * phone. Counted from the answer under the H1 to the call to action,
      * the FAQ included.
      */
-    #[DataProvider('voicePilotProvider')]
-    public function test_a_pilot_page_is_the_length_the_spec_sets(string $slug): void
+    #[DataProvider('draftedPageProvider')]
+    public function test_a_drafted_page_is_the_length_the_spec_sets(string $slug): void
     {
         $this->publishLandingPage($slug);
 
@@ -200,8 +224,8 @@ class LandingPageTest extends TestCase
         $this->assertLessThanOrEqual(1000, $words, "{$slug} has {$words} words of body copy.");
     }
 
-    #[DataProvider('voicePilotProvider')]
-    public function test_a_pilot_page_is_marked_up_as_questions_and_as_the_product(string $slug): void
+    #[DataProvider('draftedPageProvider')]
+    public function test_a_drafted_page_is_marked_up_as_questions_and_as_the_product(string $slug): void
     {
         $this->publishLandingPage($slug);
 
@@ -229,7 +253,7 @@ class LandingPageTest extends TestCase
     /**
      * An existing answer is never reworded: a page quotes the FAQ page.
      */
-    #[DataProvider('voicePilotProvider')]
+    #[DataProvider('draftedPageProvider')]
     public function test_reused_answers_read_exactly_as_they_do_on_the_faq_page(string $slug): void
     {
         $this->publishLandingPage($slug);
@@ -253,8 +277,8 @@ class LandingPageTest extends TestCase
      * A question this page asks of its own must not be one the FAQ page
      * already answers, or the two answers drift apart.
      */
-    #[DataProvider('voicePilotProvider')]
-    public function test_a_pilot_page_reuses_a_question_rather_than_rewording_it(string $slug): void
+    #[DataProvider('draftedPageProvider')]
+    public function test_a_drafted_page_reuses_a_question_rather_than_rewording_it(string $slug): void
     {
         $existing = collect(Faq::questions());
 
@@ -264,8 +288,8 @@ class LandingPageTest extends TestCase
         }
     }
 
-    #[DataProvider('voicePilotProvider')]
-    public function test_every_question_on_a_pilot_page_is_addressable(string $slug): void
+    #[DataProvider('draftedPageProvider')]
+    public function test_every_question_on_a_drafted_page_is_addressable(string $slug): void
     {
         $this->publishLandingPage($slug);
 
@@ -280,7 +304,7 @@ class LandingPageTest extends TestCase
      * Every price a page states is the configured one, in the copy and in
      * the markup a machine quotes.
      */
-    #[DataProvider('voicePilotProvider')]
+    #[DataProvider('draftedPageProvider')]
     public function test_a_price_change_in_config_reaches_the_copy_and_the_markup(string $slug): void
     {
         config([
@@ -317,8 +341,8 @@ class LandingPageTest extends TestCase
      * The honesty rule: a page that sells dynamic codes says what happens
      * when the account lapses, and that static codes need nothing from us.
      */
-    #[DataProvider('voicePilotProvider')]
-    public function test_a_pilot_page_is_honest_about_what_happens_when_an_account_lapses(string $slug): void
+    #[DataProvider('draftedPageProvider')]
+    public function test_a_drafted_page_is_honest_about_what_happens_when_an_account_lapses(string $slug): void
     {
         $this->publishLandingPage($slug);
 
@@ -333,10 +357,10 @@ class LandingPageTest extends TestCase
 
     /**
      * The searcher's word, quoted only where the searcher used it. None of
-     * the pilot pages is the page for that search.
+     * these pages is the page for that search.
      */
-    #[DataProvider('voicePilotProvider')]
-    public function test_a_pilot_page_does_not_call_a_lapsed_code_expired(string $slug): void
+    #[DataProvider('draftedPageNotAboutExpiryProvider')]
+    public function test_a_drafted_page_does_not_call_a_lapsed_code_expired(string $slug): void
     {
         $this->publishLandingPage($slug);
 
@@ -346,12 +370,38 @@ class LandingPageTest extends TestCase
     }
 
     /**
-     * Each page is written from scratch for its case, so no paragraph of one
-     * page's own copy turns up on another.
+     * The page for that search quotes the word in its title and its H1, so
+     * the searcher knows they are in the right place, and then speaks of a
+     * code that stopped resolving, as every other page does. The markup
+     * names the page by its H1, so it quotes the word too.
      */
-    public function test_the_pilot_pages_are_not_one_template_with_the_nouns_swapped(): void
+    public function test_the_expired_page_quotes_the_searcher_and_then_drops_the_word(): void
     {
-        $paragraphs = collect(self::voicePilotProvider())
+        $page = LandingPages::find('qr-code-expired');
+
+        $this->assertStringContainsStringIgnoringCase('expired', $page->title);
+        $this->assertStringContainsStringIgnoringCase('expired', $page->h1);
+
+        $this->publishLandingPage($page->slug);
+
+        $html = $this->get('/'.$page->slug)->assertOk()->getContent();
+        $html = preg_replace([
+            '~<title>.*?</title>~s',
+            '~<h1 class="eq-h1">.*?</h1>~s',
+            '~<script type="application/ld\+json">.*?</script>~s',
+        ], '', $html);
+
+        $this->assertStringNotContainsStringIgnoringCase('expired', strip_tags($html));
+    }
+
+    /**
+     * Each page is written from scratch for its case, so no paragraph of one
+     * page's own copy turns up on another. The two pages for a dead code in
+     * particular must not read as one page published twice.
+     */
+    public function test_the_drafted_pages_are_not_one_template_with_the_nouns_swapped(): void
+    {
+        $paragraphs = collect(self::draftedPageProvider())
             ->map(fn (array $case): string => file_get_contents(resource_path('views/landing/'.$case[0].'.blade.php')))
             ->map(function (string $source): array {
                 preg_match_all('~<p>(.*?)</p>~s', $source, $matches);
@@ -362,11 +412,11 @@ class LandingPageTest extends TestCase
         $all = $paragraphs->flatten();
 
         $this->assertNotEmpty($all);
-        $this->assertSame($all->count(), $all->unique()->count(), 'Two pilot pages share a paragraph.');
+        $this->assertSame($all->count(), $all->unique()->count(), 'Two drafted pages share a paragraph.');
     }
 
-    #[DataProvider('voicePilotProvider')]
-    public function test_a_pilot_page_embeds_the_static_generator_as_itself(string $slug): void
+    #[DataProvider('draftedPageProvider')]
+    public function test_a_drafted_page_embeds_the_static_generator_as_itself(string $slug): void
     {
         $this->publishLandingPage($slug);
 
@@ -393,8 +443,8 @@ class LandingPageTest extends TestCase
         $this->assertSame($fromHome->json('svg'), $fromHub->json('svg'));
     }
 
-    #[DataProvider('voicePilotProvider')]
-    public function test_a_pilot_page_sends_strangers_to_the_trial(string $slug): void
+    #[DataProvider('draftedPageProvider')]
+    public function test_a_drafted_page_sends_strangers_to_the_trial(string $slug): void
     {
         $this->publishLandingPage($slug);
 

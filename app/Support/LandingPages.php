@@ -81,7 +81,12 @@ class LandingPages
                 h1: 'QR code expired? What happened, and how to fix it',
                 keyword: 'qr code expired',
                 related: ['qr-code-stopped-working', 'fix-printed-qr-code', 'free-qr-code-no-expiration'],
-                faq: [],
+                faq: [
+                    self::switchBackOn(),
+                    self::stickerOverOldCode(),
+                    'static-expiry',
+                    'free-trial',
+                ],
                 published: false,
             ),
             new LandingPage(
@@ -91,7 +96,12 @@ class LandingPages
                 h1: 'A free QR code with no expiration, and no catch',
                 keyword: 'free qr code no expiration',
                 related: ['qr-code-without-subscription', 'qr-code-expired', 'google-review-qr-code'],
-                faq: [],
+                faq: [
+                    self::whyStaticIsFree(),
+                    self::tellStaticFromDynamic(),
+                    'static-expiry',
+                    'static-recover',
+                ],
                 published: false,
             ),
             new LandingPage(
@@ -101,7 +111,12 @@ class LandingPages
                 h1: 'A QR code generator with no subscription',
                 keyword: 'qr code generator no subscription',
                 related: ['free-qr-code-no-expiration', 'qr-code-stopped-working', 'fix-printed-qr-code'],
-                faq: [],
+                faq: [
+                    self::payOnce(),
+                    self::subscribeForOneMonth(),
+                    'free-trial',
+                    'cancelling',
+                ],
                 published: false,
             ),
             new LandingPage(
@@ -111,7 +126,12 @@ class LandingPages
                 h1: 'How to change a QR code after printing',
                 keyword: 'change qr code after printing',
                 related: ['qr-code-stopped-working', 'product-packaging-qr-code', 'restaurant-menu-qr-code'],
-                faq: [],
+                faq: [
+                    self::redirectTheOldAddress(),
+                    self::dynamicMadeElsewhere(),
+                    'edit-after-printing',
+                    'static-to-dynamic',
+                ],
                 published: false,
             ),
             new LandingPage(
@@ -354,6 +374,181 @@ class LandingPages
                     more, most often after a free trial ran out. The person scanning cannot fix that.
                     Whoever made the code can, by paying that service or by printing a new code. Our
                     own inactive codes show a plain notice instead, and never ask a stranger to pay.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * The first hope of someone holding a code a service has switched off:
+     * that paying will bring the same print back.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function switchBackOn(): array
+    {
+        return [
+            'id' => 'switch-back-on',
+            'question' => 'Can the old code be switched back on?',
+            'answer' => <<<'HTML'
+                <p>
+                    Usually, but only by the company the code runs through. The pattern holds a short link
+                    on their domain, so they decide whether scans are sent on. Most will turn it back on
+                    once the account is paid for. Before you pay, ask them to confirm that the same
+                    printed code will open your page again. No other generator can take it over.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * The quick fix for a handful of printed pieces, and the way it goes
+     * wrong.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function stickerOverOldCode(): array
+    {
+        return [
+            'id' => 'sticker-over-old-code',
+            'question' => 'Can I stick a new code over the old one?',
+            'answer' => <<<'HTML'
+                <p>
+                    Yes, and for a few printed pieces it is the quickest fix. Make the sticker larger than
+                    the old code, so it hides the whole pattern and the clear margin around it. If any of
+                    the old pattern shows, some phones will read that instead. Scan the finished piece
+                    with two phones before you leave it.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * Free with no catch reads as a catch, so the page says why.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function whyStaticIsFree(): array
+    {
+        return [
+            'id' => 'why-static-is-free',
+            'question' => 'Why is a static code free?',
+            'answer' => <<<'HTML'
+                <p>
+                    Because it costs us nothing once you have downloaded it. Your link is drawn into the
+                    pattern, and scanning it never reaches us. We give it away so you can try us with
+                    nothing to lose. Some people come back when they need a code they can edit, and
+                    that is the part we charge for.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * How a reader checks a code they already have, made here or anywhere.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function tellStaticFromDynamic(): array
+    {
+        return [
+            'id' => 'tell-static-from-dynamic',
+            'question' => 'How can I tell if a QR code is static?',
+            'answer' => <<<'HTML'
+                <p>
+                    Scan it and look at the link your phone shows before it opens. If the link is the
+                    page itself, such as your own website, the code is static and nothing sits between
+                    the scan and the page. If it is a short link on another company's domain, the code
+                    is dynamic, and that company can stop sending scans on.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * What someone avoiding subscriptions asks next: whether the editable
+     * code can be bought outright.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function payOnce(): array
+    {
+        return [
+            'id' => 'pay-once',
+            'question' => 'Can I pay once for a dynamic code instead of subscribing?',
+            'answer' => <<<'HTML'
+                <p>
+                    No. We send every scan of a dynamic code on for as long as it is printed, so the work
+                    is never finished and paid for. We would rather charge for that openly than sell a
+                    one-off price that has to run out somewhere. If you want to pay nothing, ever, print
+                    a static code.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * The plan people make to keep the bill to one month, and where it ends.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function subscribeForOneMonth(): array
+    {
+        $graceDays = (int) config('subscription.grace_days');
+
+        return [
+            'id' => 'one-month-only',
+            'question' => 'Can I subscribe for one month and keep the code working?',
+            'answer' => <<<HTML
+                <p>
+                    Not after you cancel. The code works to the end of the month you paid for and
+                    {$graceDays} more days, then it stops resolving. It stays in your account with its
+                    scans, and works again as soon as you subscribe. One month suits a short campaign.
+                    It does not suit a sign that stays up for years.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * The fix that saves a static print run, when the address is the
+     * reader's own.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function redirectTheOldAddress(): array
+    {
+        return [
+            'id' => 'redirect-old-address',
+            'question' => 'My code opens my own website. Can I change where it goes without reprinting?',
+            'answer' => <<<'HTML'
+                <p>
+                    Yes, by redirecting the address rather than changing the code. Whoever runs your
+                    website can send the old address on to the new page with a permanent redirect, and
+                    many website builders have a setting for it. The printed code still opens the old
+                    address, and the visitor lands on the new page a moment later.
+                </p>
+                HTML,
+        ];
+    }
+
+    /**
+     * A dynamic code is only editable where it was made, which matters when
+     * the reader came to us hoping we could edit it.
+     *
+     * @return array{id: string, question: string, answer: string}
+     */
+    private static function dynamicMadeElsewhere(): array
+    {
+        return [
+            'id' => 'dynamic-made-elsewhere',
+            'question' => 'Can you change a dynamic code I made somewhere else?',
+            'answer' => <<<'HTML'
+                <p>
+                    No. Only the company whose short link is in the pattern can change where it goes, so
+                    log in there and edit the destination. Moving the code to us would mean a new code
+                    and a reprint. If you are reprinting anyway, that is the moment to choose where the
+                    next one lives.
                 </p>
                 HTML,
         ];
