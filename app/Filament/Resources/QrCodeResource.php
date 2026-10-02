@@ -359,9 +359,9 @@ class QrCodeResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('qr_code_image')
+                Tables\Columns\ViewColumn::make('drawing')
                     ->label('QR Code')
-                    ->square(),
+                    ->view('filament.tables.columns.qr-drawing'),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable(),
                 Tables\Columns\BadgeColumn::make('qr_content_type')

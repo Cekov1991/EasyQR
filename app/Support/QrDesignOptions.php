@@ -85,6 +85,27 @@ class QrDesignOptions
     }
 
     /**
+     * The Design a new code starts with, and the one a code without a Design is
+     * drawn in: the Rounded Look, no frame, no logo. Mirrors the renderer's
+     * `defaultDesign()`, key for key.
+     *
+     * @return array<string, mixed>
+     */
+    public static function defaultDesign(): array
+    {
+        $settings = self::all()['looks']['rounded'];
+        unset($settings['label']);
+
+        return [
+            'version' => 1,
+            ...$settings,
+            'frame' => 'none',
+            'frameText' => self::frameText()['default'],
+            'logo' => null,
+        ];
+    }
+
+    /**
      * Replaces the data for a test, or restores the file when given null.
      *
      * @param  array<string, mixed>|null  $data

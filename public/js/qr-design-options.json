@@ -36,6 +36,7 @@
             "swatches": ["#ffffff", "#F4FAFC", "#fdf6ec", "#f1f1f8", "#D4EBF2", "#111111", "#0A0F24"]
         }
     },
+    "png": { "sizes": [512, 1024, 2048, 4096], "default": 1024 },
     "frameText": { "max": 18, "default": "SCAN ME" },
     "logo": {
         "size": { "min": 10, "max": 25, "default": 20, "step": 1 },

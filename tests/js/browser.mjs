@@ -80,7 +80,7 @@ async function until(check, what, timeout = 15000) {
 }
 
 /** Serves the app on a fresh SQLite database; resolves to its origin and a stop function. */
-async function serveApp(directory) {
+async function serveApp(directory, seed) {
     const database = join(directory, 'app.sqlite');
     const port = await freePort();
     const env = {
@@ -103,6 +103,14 @@ async function serveApp(directory) {
 
     if (migrated.status !== 0) {
         throw new Error(`Could not prepare the test database: ${migrated.stderr || migrated.stdout}`);
+    }
+
+    if (seed) {
+        const seeded = spawnSync('php', ['artisan', 'tinker', '--no-interaction', `--execute=${seed}`], { cwd: ROOT, env });
+
+        if (seeded.status !== 0) {
+            throw new Error(`Could not seed the test database: ${seeded.stderr || seeded.stdout}`);
+        }
     }
 
     const router = join(ROOT, 'vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php');
@@ -308,9 +316,9 @@ export class Tab {
 }
 
 /** Starts the app and Chrome; `tab()` opens a clean tab, `stop()` tears both down. */
-export async function startBrowser() {
+export async function startBrowser({ seed } = {}) {
     const directory = mkdtempSync(join(tmpdir(), 'eq-browser-'));
-    const app = await serveApp(directory);
+    const app = await serveApp(directory, seed);
     const chrome = await startChrome(directory);
     const socket = new WebSocket(chrome.endpoint);
 

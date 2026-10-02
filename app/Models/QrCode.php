@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\QrDesignOptions;
 use Database\Factories\QrCodeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -177,6 +178,36 @@ class QrCode extends Model
                 // A file that has already gone must not block the delete.
             }
         }
+    }
+
+    /**
+     * What the code's image encodes: the Short URL redirect for a Dynamic QR
+     * Code, so every scan is counted, and the formatted content for a Static one.
+     */
+    public function encodedContent(): string
+    {
+        if ($this->type === 'dynamic') {
+            return route('qr.redirect', $this->short_url);
+        }
+
+        return $this->formated_content;
+    }
+
+    /**
+     * The Design the code is drawn in. A code saved without one, or with
+     * anything but a version 1 Design, falls back to the Rounded Look.
+     *
+     * @return array<string, mixed>
+     */
+    public function drawingDesign(): array
+    {
+        $design = $this->options['design'] ?? null;
+
+        if (is_array($design) && ($design['version'] ?? null) === 1) {
+            return $design;
+        }
+
+        return QrDesignOptions::defaultDesign();
     }
 
     public function getFormatedContentAttribute(): string
