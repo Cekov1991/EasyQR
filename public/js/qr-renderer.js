@@ -16,6 +16,11 @@
     const BLOCK_CONTRAST = 3;
     const WARN_CONTRAST = 4;
     const MAX_LOGO_COVERAGE = 25;
+    const LOGO_LIMITS = Object.freeze({
+        size: Object.freeze({ min: 10, max: 25 }),
+        padding: Object.freeze({ min: 0, max: 5 }),
+        hiddenBox: MAX_LOGO_COVERAGE,
+    });
 
     const LOOKS = Object.freeze({
         rounded: Object.freeze({ label: 'Rounded', dot: 'fluid', corner: 'rounded', eye: 'dot', codeColor: '#171b19', eyeColor: '#348FAD', bgColor: '#ffffff' }),
@@ -76,15 +81,33 @@
         return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
     }
 
-    /** Share of the code's area the logo hides, in percent: the cleared box with clear space on, else the logo box. */
+    /**
+     * Width of the box the logo hides, as a percent of the code's width: the logo plus its padding
+     * on each side when a white backing or clear space covers that padding, otherwise the logo alone.
+     */
     function logoCoverage(logo) {
         if (!logo) {
             return 0;
         }
 
-        const edge = logo.clearSpace ? logo.size + 2 * logo.padding : logo.size;
+        return logo.backing || logo.clearSpace ? logo.size + 2 * logo.padding : logo.size;
+    }
 
-        return (edge * edge) / 100;
+    /** The largest logo size the controls may offer for a padding, so the hidden box stays within the limit. */
+    function maxLogoSize(padding) {
+        return Math.min(LOGO_LIMITS.size.max, MAX_LOGO_COVERAGE - 2 * clamp(padding, LOGO_LIMITS.padding.min, LOGO_LIMITS.padding.max));
+    }
+
+    function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, Number(value)));
+    }
+
+    /** Pulls a logo's size and padding into the ranges, padding first, so the hidden box never exceeds the limit. */
+    function clampLogo(logo) {
+        const padding = clamp(logo.padding, LOGO_LIMITS.padding.min, LOGO_LIMITS.padding.max);
+        const size = clamp(logo.size, LOGO_LIMITS.size.min, maxLogoSize(padding));
+
+        return { ...logo, size, padding };
     }
 
     function round(value, places = 1) {
@@ -116,7 +139,7 @@
         }
 
         if (coverage > MAX_LOGO_COVERAGE) {
-            blockers.push({ rule: 'logo-coverage', message: `The logo hides ${round(coverage)}% of the code. Keep it to ${MAX_LOGO_COVERAGE}% or less.` });
+            blockers.push({ rule: 'logo-coverage', message: `The logo and its padding hide ${round(coverage)}% of the code's width. Keep it to ${MAX_LOGO_COVERAGE}% or less.` });
         }
 
         return { blocked: blockers.length > 0, blockers, warnings };
@@ -321,5 +344,5 @@
         };
     }
 
-    root.QrRenderer = Object.freeze({ render, check, contrast, luminance, logoCoverage, defaultDesign, applyLook, lookOf, LOOKS });
+    root.QrRenderer = Object.freeze({ render, check, contrast, luminance, logoCoverage, maxLogoSize, clampLogo, LOGO_LIMITS, defaultDesign, applyLook, lookOf, LOOKS });
 })(globalThis);

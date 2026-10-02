@@ -2,8 +2,6 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { CONTENTS, design, drawn, logo, renderer, scansAs, SHORT_URL } from './support.mjs';
 
-const READABLE_BOX_PERCENT = 28;
-
 const SETS = {
     dot: ['square', 'rounded', 'dots', 'fluid'],
     corner: ['square', 'rounded', 'circle'],
@@ -23,34 +21,78 @@ describe('every shape decodes to exactly its content', () => {
         }
     }
 
-    it('square corners with the dot eye on a vCard', { todo: 'jsQR cannot find these finders at any size; undecided whether the geometry or the decoder is at fault' }, () => {
+    it('square corners with the dot eye on a vCard', { todo: 'jsQR cannot read this on large codes; phones are checked by hand, see ticket 08 manual checklist' }, () => {
         assert.ok(scansAs(CONTENTS.vcard, design({ corner: 'square', eye: 'dot' })));
     });
 });
 
-describe('a logo decodes', () => {
+describe('a logo with a 25% wide hidden box decodes', () => {
+    const BOXES = [
+        { clearSpace: true, backing: true, size: 17, padding: 4 },
+        { clearSpace: true, backing: false, size: 17, padding: 4 },
+        { clearSpace: false, backing: true, size: 17, padding: 4 },
+        { clearSpace: false, backing: false, size: 25, padding: 0 },
+    ];
+
     for (const [name, content] of Object.entries(CONTENTS)) {
         for (const shape of ['square', 'rounded', 'circle']) {
-            for (const clearSpace of [true, false]) {
+            for (const box of BOXES) {
                 for (const frame of ['none', 'badge']) {
-                    it(`${name}, ${shape} logo, clear space ${clearSpace}, frame ${frame}, cleared box up to ${READABLE_BOX_PERCENT}% of the width`, () => {
-                        const d = design({ frame, logo: logo({ shape, size: clearSpace ? 20 : 30, padding: clearSpace ? 4 : 0, clearSpace }) });
+                    it(`${name}, ${shape} logo, clear space ${box.clearSpace}, backing ${box.backing}, frame ${frame}`, () => {
+                        const d = design({ frame, logo: logo({ shape, ...box }) });
+                        assert.equal(renderer.logoCoverage(d.logo), 25);
+                        assert.equal(renderer.check(d).blocked, false);
                         assert.ok(scansAs(content, d));
                     });
                 }
             }
         }
     }
+});
 
-    it('with no backing', () => {
-        assert.ok(scansAs(CONTENTS.long, design({ logo: logo({ size: 30, padding: 8, backing: false, clearSpace: false }) })));
+describe('the logo controls cannot reach a blocked value', () => {
+    it('limits size to 10-25% and padding to 0-5%', () => {
+        assert.deepEqual(renderer.LOGO_LIMITS.size, { min: 10, max: 25 });
+        assert.deepEqual(renderer.LOGO_LIMITS.padding, { min: 0, max: 5 });
     });
 
-    for (const [name, content] of Object.entries(CONTENTS)) {
-        it(`${name}: the largest logo the ranges allow, with clear space`, { todo: 'size 30 + padding 8 clears 21% of the code, under the 25% limit, but no content decodes; see the blocker in the ticket' }, () => {
-            assert.ok(scansAs(content, design({ logo: logo({ size: 30, padding: 8, clearSpace: true }) })));
-        });
-    }
+    it('caps the size at 25% minus twice the padding', () => {
+        assert.equal(renderer.maxLogoSize(0), 25);
+        assert.equal(renderer.maxLogoSize(2), 21);
+        assert.equal(renderer.maxLogoSize(5), 15);
+    });
+
+    it('never offers a size below the minimum even at the largest padding', () => {
+        assert.ok(renderer.maxLogoSize(5) >= renderer.LOGO_LIMITS.size.min);
+    });
+
+    it('every size and padding the controls allow stays within the limit and decodes the largest', () => {
+        for (let padding = 0; padding <= 5; padding++) {
+            for (let size = 10; size <= renderer.maxLogoSize(padding); size++) {
+                for (const clearSpace of [true, false]) {
+                    const d = design({ logo: logo({ size, padding, clearSpace, backing: true }) });
+                    assert.equal(renderer.check(d).blocked, false, `${size}/${padding}`);
+                }
+            }
+        }
+        assert.ok(scansAs(CONTENTS.long, design({ logo: logo({ size: renderer.maxLogoSize(5), padding: 5 }) })));
+    });
+
+    it('pulls out-of-range values back into the ranges', () => {
+        assert.deepEqual(
+            { size: renderer.clampLogo(logo({ size: 40, padding: 9 })).size, padding: renderer.clampLogo(logo({ size: 40, padding: 9 })).padding },
+            { size: 15, padding: 5 },
+        );
+        assert.equal(renderer.clampLogo(logo({ size: 3, padding: 0 })).size, 10);
+        assert.equal(renderer.clampLogo(logo({ size: 25, padding: 0 })).size, 25);
+        assert.equal(renderer.check(design({ logo: renderer.clampLogo(logo({ size: 99, padding: 99 })) })).blocked, false);
+    });
+
+    it('keeps the logo it is given untouched', () => {
+        const original = logo({ size: 40, padding: 9 });
+        renderer.clampLogo(original);
+        assert.equal(original.size, 40);
+    });
 });
 
 describe('colours either side of the 3:1 limit', () => {
@@ -96,10 +138,11 @@ describe('the renderer reports facts', () => {
         assert.equal(drawn(SHORT_URL, design()).logoCoverage, 0);
     });
 
-    it('measures coverage as the cleared box when clear space is on, otherwise the logo box', () => {
-        assert.equal(renderer.logoCoverage(logo({ size: 20, padding: 5, clearSpace: true })), 9);
-        assert.equal(renderer.logoCoverage(logo({ size: 20, padding: 5, clearSpace: false })), 4);
-        assert.equal(drawn(SHORT_URL, design({ logo: logo({ size: 20, padding: 5, clearSpace: false }) })).logoCoverage, 4);
+    it('measures coverage as the hidden box width: logo plus padding when covered, else the logo alone', () => {
+        assert.equal(renderer.logoCoverage(logo({ size: 15, padding: 5, clearSpace: true, backing: false })), 25);
+        assert.equal(renderer.logoCoverage(logo({ size: 15, padding: 5, clearSpace: false, backing: true })), 25);
+        assert.equal(renderer.logoCoverage(logo({ size: 15, padding: 5, clearSpace: false, backing: false })), 15);
+        assert.equal(drawn(SHORT_URL, design({ logo: logo({ size: 20, padding: 2, clearSpace: false, backing: false }) })).logoCoverage, 20);
     });
 
     it('sizes the image to the frame', () => {
@@ -163,18 +206,21 @@ describe('scan safety', () => {
         assert.deepEqual(warned(d), ['inverted']);
     });
 
-    it('blocks a logo covering more than 25% of the code, and allows exactly 25%', () => {
-        assert.deepEqual(rules(design({ logo: logo({ size: 51, padding: 0, clearSpace: false }) })), ['logo-coverage']);
-        assert.deepEqual(rules(design({ logo: logo({ size: 50, padding: 0, clearSpace: false }) })), []);
+    it('blocks a hidden box wider than 25% of the code width, and allows exactly 25%', () => {
+        const bare = { clearSpace: false, backing: false, padding: 0 };
+        assert.deepEqual(rules(design({ logo: logo({ ...bare, size: 26 }) })), ['logo-coverage']);
+        assert.deepEqual(rules(design({ logo: logo({ ...bare, size: 25 }) })), []);
     });
 
-    it('counts the cleared box rather than the logo when clear space is on', () => {
-        assert.deepEqual(rules(design({ logo: logo({ size: 30, padding: 12, clearSpace: true }) })), ['logo-coverage']);
-        assert.deepEqual(rules(design({ logo: logo({ size: 30, padding: 12, clearSpace: false }) })), []);
+    it('counts the logo plus its padding when clear space or backing hides it', () => {
+        assert.deepEqual(rules(design({ logo: logo({ size: 20, padding: 3, clearSpace: true, backing: false }) })), ['logo-coverage']);
+        assert.deepEqual(rules(design({ logo: logo({ size: 20, padding: 3, clearSpace: false, backing: true }) })), ['logo-coverage']);
+        assert.deepEqual(rules(design({ logo: logo({ size: 20, padding: 3, clearSpace: false, backing: false }) })), []);
+        assert.deepEqual(rules(design({ logo: logo({ size: 19, padding: 3, clearSpace: true }) })), []);
     });
 
     it('reports every broken limit at once, each with a message', () => {
-        const d = design({ codeColor: '#eeeeee', bgColor: '#ffffff', logo: logo({ size: 60, clearSpace: false }) });
+        const d = design({ codeColor: '#eeeeee', bgColor: '#ffffff', logo: logo({ size: 60, clearSpace: false, backing: false }) });
         const { blockers } = renderer.check(d);
         assert.deepEqual(blockers.map((b) => b.rule).sort(), ['contrast', 'logo-coverage']);
         assert.ok(blockers.every((b) => b.message.length > 0));
