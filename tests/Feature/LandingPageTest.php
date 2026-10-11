@@ -502,7 +502,7 @@ class LandingPageTest extends TestCase
             ->assertSee('id="static-looks"', false)
             ->assertSee('id="static-png-size"', false)
             ->assertDontSee('/qr/instant', false)
-            ->assertDontSee('Log in to generate a dynamic QR');
+            ->assertDontSee('eq-home-rail');
     }
 
     /**
