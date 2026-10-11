@@ -58,4 +58,6 @@
 
     </x-static-generator>
 
+    <x-guarantees />
+
 @endsection
