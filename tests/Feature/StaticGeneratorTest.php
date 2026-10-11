@@ -62,14 +62,14 @@ class StaticGeneratorTest extends TestCase
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('Dynamic QR')
-            ->assertSee('Log in to generate a dynamic QR');
+            ->assertSee('class="eq-home-rail"', false)
+            ->assertSee('Dynamic QR');
     }
 
     public function test_the_dynamic_teaser_is_not_part_of_the_generator(): void
     {
         $this->blade('<x-static-generator />')
-            ->assertDontSee('Log in to generate a dynamic QR');
+            ->assertDontSee('eq-home-rail');
     }
 
     public function test_the_page_it_is_embedded_on_travels_with_both_register_links(): void

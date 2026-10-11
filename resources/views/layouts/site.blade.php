@@ -73,7 +73,7 @@
 
 <body>
 
-    <div class="eq-shell">
+    <div class="eq-shell @yield('shell_class')">
 
         <header class="eq-header">
             <a href="{{ route('welcome') }}" class="eq-logo">

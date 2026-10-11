@@ -88,6 +88,8 @@
 
     </div>
 
+    <x-guarantees />
+
     <div class="eq-prose">
 
         <h2>What you pay</h2>
