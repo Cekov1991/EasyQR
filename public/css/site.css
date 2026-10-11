@@ -1418,3 +1418,140 @@ textarea.eq-input {
         padding: 24px 16px;
     }
 }
+
+/* -------------------------------------------------------------- home ----- */
+
+/*
+ * The homepage uses a wider frame than the reading pages, so the generator
+ * and the rail sit side by side instead of stacking down the middle.
+ */
+.eq-shell--wide {
+    --eq-width: 1160px;
+}
+
+.eq-home {
+    width: 100%;
+    max-width: var(--eq-width);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 56px;
+    align-items: start;
+}
+
+.eq-hero--start {
+    text-align: left;
+    max-width: none;
+    margin-bottom: 32px;
+}
+
+.eq-home-main .eq-editor-wrap {
+    align-items: stretch;
+}
+
+.eq-home-main .eq-editor-link,
+.eq-home-main .eq-editor {
+    max-width: 560px;
+}
+
+/* Sticky within its own row only: the grid ends before the promises block. */
+.eq-home-rail {
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.eq-rail-card {
+    background: var(--eq-surface);
+    border: 1px solid var(--eq-border);
+    border-radius: var(--eq-radius-card);
+    padding: 24px;
+    box-shadow: var(--eq-shadow);
+}
+
+.eq-rail-card .eq-card-head {
+    margin-bottom: 12px;
+}
+
+.eq-rail-card .eq-price {
+    font-size: 28px;
+}
+
+.eq-rail-card .eq-price-note {
+    margin-bottom: 12px;
+}
+
+.eq-rail-card .eq-card-text {
+    margin-bottom: 18px;
+}
+
+.eq-rail-quiet {
+    margin: 10px 0 0;
+    font-size: 13.5px;
+    color: var(--eq-muted);
+}
+
+.eq-rail-promises {
+    background: var(--eq-tint);
+    border-radius: var(--eq-radius-card);
+    padding: 20px 22px;
+}
+
+.eq-rail-title {
+    font-family: var(--eq-font-heading);
+    font-weight: 700;
+    font-size: 16px;
+    margin: 0 0 12px;
+}
+
+.eq-rail-list {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.eq-rail-tick {
+    color: var(--eq-accent);
+    font-weight: 700;
+    margin-right: 8px;
+}
+
+.eq-rail-more {
+    font-size: 13.5px;
+}
+
+.eq-home + .eq-promises {
+    margin-top: 56px;
+}
+
+.eq-home + .eq-promises .eq-promise-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+    .eq-home {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 32px;
+    }
+
+    .eq-hero--start {
+        text-align: center;
+    }
+
+    .eq-home-main .eq-editor-wrap {
+        align-items: center;
+    }
+
+    .eq-home-rail {
+        position: static;
+    }
+
+    .eq-home + .eq-promises .eq-promise-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

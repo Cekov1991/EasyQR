@@ -69,6 +69,17 @@ class GuaranteesTest extends TestCase
             ->assertSeeText('start again the moment you subscribe');
     }
 
+    public function test_the_homepage_rail_summarises_the_promises_from_config_and_links_to_them(): void
+    {
+        config([
+            'subscription.trial_days' => 11,
+            'subscription.grace_days' => 13,
+        ]);
+
+        $this->get('/')
+            ->assertSeeInOrder(['Before you pay', '11-day trial, no card', '13-day grace on a failed renewal', 'href="#guarantees"'], false);
+    }
+
     #[DataProvider('pagesCarryingTheGuarantees')]
     public function test_the_scan_privacy_block_states_what_is_and_is_not_recorded(string $path): void
     {
